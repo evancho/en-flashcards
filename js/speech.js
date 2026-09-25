@@ -27,6 +27,17 @@ export function pickChineseVoice(voices) {
 
 let chosenEnglish = null;
 let chosenChinese = null;
+let speakGeneration = 0;
+
+export function stopSpeech() {
+  speakGeneration += 1;
+  if (!speechAvailable()) return;
+  try {
+    window.speechSynthesis.cancel();
+  } catch {
+    /* ignore */
+  }
+}
 
 export function prepareVoices() {
   if (!speechAvailable()) return;
@@ -39,33 +50,66 @@ export function prepareVoices() {
   window.speechSynthesis.addEventListener?.("voiceschanged", refresh);
 }
 
-function speak(text, voice, fallbackLang) {
+function speak(text, voice, fallbackLang, onend) {
   if (!speechAvailable()) return false;
   const line = String(text ?? "").trim();
   if (!line) return false;
   const synth = window.speechSynthesis;
+  const generation = ++speakGeneration;
   const utterance = new window.SpeechSynthesisUtterance(line);
   utterance.lang = voice?.lang || fallbackLang;
   utterance.rate = 0.95;
   if (voice) utterance.voice = voice;
+  let settled = false;
+  let timer = 0;
+  const finish = () => {
+    if (settled || generation !== speakGeneration) return;
+    settled = true;
+    clearTimeout(timer);
+    onend?.();
+  };
+  if (onend) timer = setTimeout(finish, Math.min(25000, 2500 + line.length * 220));
+  utterance.onend = finish;
+  utterance.onerror = finish;
+  const start = () => {
+    if (generation !== speakGeneration) return;
+    try {
+      synth.speak(utterance);
+    } catch {
+      settled = true;
+      clearTimeout(timer);
+    }
+  };
   try {
     if (synth.paused) synth.resume();
+    const busy = Boolean(synth.speaking || synth.pending);
     synth.cancel();
-    synth.speak(utterance);
+    if (busy) setTimeout(start, 60);
+    else start();
   } catch {
+    clearTimeout(timer);
     return false;
   }
   return true;
 }
 
-export function speakEnglish(text) {
+function voiceFor(lang) {
   const voices = speechAvailable() ? window.speechSynthesis.getVoices() : [];
-  const voice = chosenEnglish || pickEnglishVoice(voices);
-  return speak(text, voice, "en-US");
+  if (lang === "zh") return { voice: chosenChinese || pickChineseVoice(voices), fallback: "zh-TW" };
+  return { voice: chosenEnglish || pickEnglishVoice(voices), fallback: "en-US" };
+}
+
+export function speakEnglish(text) {
+  const picked = voiceFor("en");
+  return speak(text, picked.voice, picked.fallback);
 }
 
 export function speakChinese(text) {
-  const voices = speechAvailable() ? window.speechSynthesis.getVoices() : [];
-  const voice = chosenChinese || pickChineseVoice(voices);
-  return speak(text, voice, "zh-TW");
+  const picked = voiceFor("zh");
+  return speak(text, picked.voice, picked.fallback);
+}
+
+export function speakHeard(text, lang, onend) {
+  const picked = voiceFor(lang === "zh" ? "zh" : "en");
+  return speak(text, picked.voice, picked.fallback, onend);
 }

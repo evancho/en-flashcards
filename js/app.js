@@ -1,8 +1,8 @@
 import { createStore, parseImport } from "./store.js";
 import { formatDelay, previewPlan, stageLabel, formatDue } from "./srs.js";
-import { prepareVoices, speakChinese, speakEnglish, speechAvailable } from "./speech.js";
+import { prepareVoices, speakChinese, speakEnglish, speakHeard, speechAvailable, stopSpeech } from "./speech.js";
 import { findTermRanges } from "./highlight.js";
-import { readSettings, shuffleInPlace, writeSettings } from "./review.js";
+import { buildCommuteQueue, commuteLines, readSettings, shuffleInPlace, writeSettings } from "./review.js";
 
 const TIP_KEY = "en-flashcards.ios-tip";
 const EXAMPLES = [
@@ -324,6 +324,144 @@ function renderList() {
   }
 }
 
+const commute = {
+  cards: [],
+  index: 0,
+  line: 0,
+  playing: false,
+  timer: 0,
+  wakeLock: null,
+};
+
+function clearCommuteTimer() {
+  clearTimeout(commute.timer);
+  commute.timer = 0;
+}
+
+async function requestWakeLock() {
+  try {
+    if (!navigator.wakeLock?.request) return;
+    commute.wakeLock = await navigator.wakeLock.request("screen");
+  } catch {
+    commute.wakeLock = null;
+  }
+}
+
+async function releaseWakeLock() {
+  const lock = commute.wakeLock;
+  commute.wakeLock = null;
+  try {
+    await lock?.release();
+  } catch {
+    /* ignore */
+  }
+}
+
+function stopCommuteAudio() {
+  commute.playing = false;
+  clearCommuteTimer();
+  stopSpeech();
+  releaseWakeLock();
+}
+
+function prepareCommute() {
+  stopCommuteAudio();
+  const { cards, corrupt } = store.load();
+  commute.cards = corrupt ? [] : buildCommuteQueue(cards, Date.now(), { random: settings.random });
+  commute.index = 0;
+  commute.line = 0;
+}
+
+function renderCommute() {
+  const total = commute.cards.length;
+  const card = commute.cards[commute.index];
+  $("#commute-progress").textContent = total ? `第 ${commute.index + 1} / 共 ${total}` : "沒有可聽的單字";
+  $("#commute-card").hidden = !card;
+  $("#commute-empty").hidden = Boolean(card) || Boolean(store.stats().corrupt);
+  $("#commute-card").classList.toggle("reverse", settings.reverse);
+  const lines = card ? commuteLines(card) : [];
+  const speaking = commute.playing ? lines[commute.line]?.kind : "";
+  if (card) {
+    $("#commute-en").textContent = card.front || "";
+    $("#commute-zh").textContent = card.back || "";
+    $("#commute-zh").hidden = !card.back;
+    $("#commute-example").textContent = card.example || "";
+    $("#commute-example").hidden = !card.example;
+    $("#commute-example-zh").textContent = card.exampleZh || "";
+    $("#commute-example-zh").hidden = !card.exampleZh;
+  }
+  $("#commute-en").classList.toggle("is-speaking", speaking === "front");
+  $("#commute-zh").classList.toggle("is-speaking", speaking === "back");
+  $("#commute-example").classList.toggle("is-speaking", speaking === "example");
+  $("#commute-example-zh").classList.toggle("is-speaking", speaking === "exampleZh");
+  const canSpeak = speechAvailable();
+  $("#commute-speech-note").hidden = canSpeak;
+  $("#commute-play").textContent = commute.playing ? "暫停" : "播放";
+  $("#commute-play").disabled = !total || !canSpeak;
+  $("#commute-prev").disabled = !total;
+  $("#commute-next").disabled = !total;
+}
+
+function playCommuteLine() {
+  if (!commute.playing) return;
+  const card = commute.cards[commute.index];
+  if (!card) {
+    stopCommuteAudio();
+    renderCommute();
+    return;
+  }
+  const lines = commuteLines(card);
+  if (commute.line >= lines.length) {
+    renderCommute();
+    commute.timer = setTimeout(() => {
+      if (!commute.playing) return;
+      commute.index = (commute.index + 1) % commute.cards.length;
+      commute.line = 0;
+      playCommuteLine();
+    }, 800);
+    return;
+  }
+  const line = lines[commute.line];
+  renderCommute();
+  const started = speakHeard(line.text, line.lang, () => {
+    if (!commute.playing) return;
+    commute.timer = setTimeout(() => {
+      if (!commute.playing) return;
+      commute.line += 1;
+      playCommuteLine();
+    }, 450);
+  });
+  if (!started) {
+    stopCommuteAudio();
+    renderCommute();
+    toast("這台裝置無法朗讀。");
+  }
+}
+
+function toggleCommute() {
+  if (!commute.cards.length) return;
+  if (commute.playing) {
+    stopCommuteAudio();
+    renderCommute();
+    return;
+  }
+  commute.playing = true;
+  requestWakeLock();
+  playCommuteLine();
+}
+
+function skipCommute(delta) {
+  if (!commute.cards.length) return;
+  const wasPlaying = commute.playing;
+  clearCommuteTimer();
+  stopSpeech();
+  commute.playing = wasPlaying;
+  commute.line = 0;
+  commute.index = (commute.index + delta + commute.cards.length) % commute.cards.length;
+  if (wasPlaying) playCommuteLine();
+  else renderCommute();
+}
+
 function renderBackup() {
   const stats = store.stats();
   $("#stat-total").textContent = String(stats.total);
@@ -336,11 +474,14 @@ function render() {
   if (state.view === "add") renderForm();
   if (state.view === "list") renderList();
   if (state.view === "backup") renderBackup();
+  if (state.view === "commute") renderCommute();
 }
 
 function openView(name) {
+  if (state.view === "commute" && name !== "commute") stopCommuteAudio();
   state.view = name;
   if (name === "review") refreshQueue();
+  if (name === "commute") prepareCommute();
   render();
   if (name === "decks") loadCatalog();
   if (name === "add") $("#front").focus();
@@ -949,6 +1090,11 @@ function bind() {
   $("#empty-open-decks").addEventListener("click", () => {
     openView("decks");
   });
+  $("#open-commute").addEventListener("click", () => openView("commute"));
+  $("#commute-play").addEventListener("click", toggleCommute);
+  $("#commute-next").addEventListener("click", () => skipCommute(1));
+  $("#commute-prev").addEventListener("click", () => skipCommute(-1));
+  $("#commute-end").addEventListener("click", () => openView("review"));
   $("#dir-en").addEventListener("click", () => {
     if (settings.reverse) {
       settings.reverse = false;
@@ -1039,6 +1185,9 @@ function bind() {
     $("#ios-tip").hidden = true;
   });
   $("#update-btn").addEventListener("click", () => location.reload());
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && commute.playing) requestWakeLock();
+  });
   $("#dialog-cancel").addEventListener("click", () => closeDialog(false));
   $("#dialog-ok").addEventListener("click", () => closeDialog(true));
   $("#dialog").addEventListener("click", (event) => {

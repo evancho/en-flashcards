@@ -176,6 +176,60 @@ h2 { margin: 0; font-size: 1.25rem; }
   overflow: auto;
 }
 
+#open-commute { flex: none; min-height: 44px; padding: 8px 14px; }
+
+#view-commute:not([hidden]) {
+  overflow: hidden;
+  gap: 10px;
+}
+
+.commute-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex: none;
+}
+
+.commute-card {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  padding: 8px 4px;
+}
+
+.commute-card .word,
+.commute-card .meaning,
+.commute-card .example-line,
+.commute-card .example-zh { margin: 0; }
+
+.commute-card.reverse #commute-zh { order: 1; }
+.commute-card.reverse #commute-en { order: 2; }
+.commute-card.reverse #commute-example-zh { order: 3; }
+.commute-card.reverse #commute-example { order: 4; }
+
+.commute-card .is-speaking { color: var(--accent-ink); }
+
+.commute-controls {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.commute-controls .btn { width: 100%; }
+
+#commute-play { min-height: 72px; font-size: 1.35rem; }
+
+#commute-prev,
+#commute-next,
+#commute-end { min-height: 56px; font-size: 1.1rem; }
+
 .review-settings {
   display: flex;
   align-items: center;
