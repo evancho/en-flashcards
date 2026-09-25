@@ -47,5 +47,10 @@ test("page points at the manifest, stylesheet, script, and icons", () => {
   }
   assert.match(html, /發音/);
   assert.match(html, /朗讀例句/);
-  assert.match(readFileSync(new URL("../sw.js", import.meta.url), "utf8"), /js\/speech\.js/);
+  assert.match(html, /版本 v2 · 含例句朗讀/);
+  const worker = readFileSync(new URL("../sw.js", import.meta.url), "utf8");
+  assert.match(worker, /const CACHE = "en-flashcards-v2"/);
+  assert.match(worker, /keys\.filter\(\(key\) => key !== CACHE\)/);
+  assert.match(worker, /js\/speech\.js/);
+  assert.equal(readFileSync(new URL("../js/store.js", import.meta.url), "utf8").includes('STORAGE_KEY = "en-flashcards.v1"'), true);
 });
