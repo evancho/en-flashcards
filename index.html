@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="description" content="離線英文單字卡。單字只存在這台裝置，沒有帳號。" />
+    <meta name="theme-color" content="#f3efe7" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1c1917" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="詞卡" />
+    <title>英文詞卡</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <a class="skip" href="#main">跳到內容</a>
+    <div class="app">
+      <header class="top">
+        <div>
+          <p class="brand">英文詞卡</p>
+          <p class="tag">只存在這台裝置</p>
+        </div>
+        <button type="button" class="due-pill" data-view="review" id="due-pill">待複習 0</button>
+      </header>
+
+      <div id="ios-tip" class="banner" hidden>
+        <p>用 Safari 下方的分享按鈕，選「加入主畫面」，再從圖示打開。那個圖示才能離線用。</p>
+        <button type="button" class="btn secondary" id="dismiss-tip">知道了</button>
+      </div>
+
+      <div id="corrupt" class="banner" hidden>
+        <p>讀不到這台裝置上的單字，已暫停寫入，避免蓋掉原資料。</p>
+        <div class="row">
+          <button type="button" class="btn secondary" id="export-raw">下載原始資料</button>
+          <button type="button" class="btn danger" id="reset-storage">清除並重來</button>
+        </div>
+      </div>
+
+      <div id="update-banner" class="banner" hidden>
+        <p>有新版本。更新會重新整理這個畫面，單字還在。</p>
+        <button type="button" class="btn secondary" id="update-btn">更新</button>
+      </div>
+
+      <main id="main">
+        <section id="view-review" class="view">
+          <p id="review-count" class="session-count" aria-live="polite"></p>
+          <div id="review-card-wrap" class="card-wrap">
+            <div id="flashcard" class="flashcard" role="button" tabindex="0">
+              <span id="card-kicker" class="kicker">英文</span>
+              <span id="card-front" class="word" lang="en"></span>
+              <span id="card-back" class="meaning" lang="zh-Hant" hidden></span>
+              <span id="card-prompt" class="prompt">輕點看答案</span>
+            </div>
+            <div id="ratings" class="ratings" hidden>
+              <button type="button" class="rate rate-again" data-rating="again">
+                <span class="rate-label">不會</span>
+                <span class="rate-delay" data-delay="again"></span>
+              </button>
+              <button type="button" class="rate rate-hard" data-rating="hard">
+                <span class="rate-label">有點生</span>
+                <span class="rate-delay" data-delay="hard"></span>
+              </button>
+              <button type="button" class="rate rate-good" data-rating="good">
+                <span class="rate-label">會了</span>
+                <span class="rate-delay" data-delay="good"></span>
+              </button>
+              <button type="button" class="rate rate-easy" data-rating="easy">
+                <span class="rate-label">很熟</span>
+                <span class="rate-delay" data-delay="easy"></span>
+              </button>
+            </div>
+          </div>
+          <div id="review-empty" class="empty" hidden>
+            <h2 id="empty-title"></h2>
+            <p id="empty-body"></p>
+            <button type="button" class="btn" id="empty-add">新增單字</button>
+            <button type="button" class="btn secondary" id="empty-examples">加幾張範例</button>
+            <button type="button" class="btn secondary" id="empty-recheck" hidden>再檢查一次</button>
+          </div>
+        </section>
+
+        <section id="view-add" class="view scroll" hidden>
+          <h2 id="form-title">新增單字</h2>
+          <form id="card-form">
+            <label>
+              英文
+              <input
+                id="front"
+                name="front"
+                maxlength="300"
+                autocomplete="off"
+                autocapitalize="off"
+                autocorrect="off"
+                spellcheck="false"
+                lang="en"
+                placeholder="apple"
+              />
+            </label>
+            <label>
+              中文或備註
+              <textarea id="back" name="back" maxlength="1000" rows="4" lang="zh-Hant" placeholder="蘋果"></textarea>
+            </label>
+            <p id="edit-note" class="hint" hidden>修改文字不會重設複習進度。</p>
+            <button type="submit" class="btn" id="save-btn">儲存</button>
+            <button type="button" class="btn secondary" id="cancel-edit" hidden>取消</button>
+            <button type="button" class="btn danger" id="delete-editing" hidden>刪除這張</button>
+          </form>
+        </section>
+
+        <section id="view-list" class="view scroll" hidden>
+          <div class="list-head">
+            <h2>詞庫</h2>
+            <p id="list-count" class="hint"></p>
+          </div>
+          <label class="search-label">
+            搜尋
+            <input id="search" type="search" maxlength="100" placeholder="英文或中文" autocomplete="off" />
+          </label>
+          <div id="card-list" class="card-list"></div>
+          <p id="list-empty" class="hint" hidden>還沒有單字。</p>
+        </section>
+
+        <section id="view-backup" class="view scroll" hidden>
+          <h2>備份</h2>
+          <p class="lede">單字存在這個畫面所在的瀏覽器或主畫面圖示裡，不會上傳。</p>
+          <p class="stat-line">這台裝置 <strong id="stat-total">0</strong> 張，待複習 <strong id="stat-due">0</strong> 張。</p>
+          <p id="offline-flag" class="hint" hidden>網頁已存進這台裝置，斷線後從圖示打開仍可使用。</p>
+          <p id="offline-missing" class="hint" hidden>這個瀏覽器不能把網頁存下來離線開。單字仍可記在本機，但斷線時可能打不開。</p>
+
+          <div class="stack">
+            <button type="button" class="btn" id="export-btn">匯出 JSON 檔</button>
+            <button type="button" class="btn secondary" id="copy-btn">複製備份文字</button>
+          </div>
+
+          <form id="import-form" class="stack">
+            <fieldset>
+              <legend>匯入</legend>
+              <label class="choice"><input type="radio" name="import-mode" value="merge" checked /> 合併（相同 id 以檔案為準）</label>
+              <label class="choice"><input type="radio" name="import-mode" value="replace" /> 取代全部</label>
+            </fieldset>
+            <input id="import-file" type="file" accept="application/json,.json" hidden />
+            <button type="button" class="btn secondary" id="pick-file">選擇 JSON 檔</button>
+            <p id="file-name" class="hint">尚未選擇檔案</p>
+            <label>
+              或貼上備份 JSON
+              <textarea id="import-text" rows="5" spellcheck="false" placeholder='{"version":1,"cards":[...]}'></textarea>
+            </label>
+            <button type="submit" class="btn">匯入</button>
+          </form>
+
+          <div class="stack danger-zone">
+            <h2>清除</h2>
+            <p class="hint">會刪掉這台裝置上的全部單字。換手機前請先匯出。</p>
+            <button type="button" class="btn danger" id="clear-all">清除全部單字</button>
+          </div>
+        </section>
+      </main>
+
+      <nav class="nav" aria-label="主要">
+        <button type="button" class="nav-btn active" data-view="review" aria-current="page">
+          複習
+          <span id="nav-due" class="badge" hidden>0</span>
+        </button>
+        <button type="button" class="nav-btn" data-view="add">新增</button>
+        <button type="button" class="nav-btn" data-view="list">詞庫</button>
+        <button type="button" class="nav-btn" data-view="backup">備份</button>
+      </nav>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <div id="dialog" class="dialog-backdrop" hidden>
+      <div
+        class="dialog-card"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="dialog-title"
+        aria-describedby="dialog-body"
+      >
+        <h2 id="dialog-title"></h2>
+        <p id="dialog-body"></p>
+        <div class="row">
+          <button type="button" class="btn secondary" id="dialog-cancel">取消</button>
+          <button type="button" class="btn" id="dialog-ok">確定</button>
+        </div>
+      </div>
+    </div>
+
+    <noscript><p class="banner">需要 JavaScript。單字只會存在這台裝置。</p></noscript>
+    <script type="module" src="js/app.js"></script>
+  </body>
+</html>
