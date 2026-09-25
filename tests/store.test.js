@@ -58,6 +58,28 @@ test("merge keeps ids and replace drops local cards", () => {
   assert.equal(store.get("only").front, "quiet");
 });
 
+test("starter merge skips the same id or front and leaves existing cards", () => {
+  const store = createStore(memory());
+  const kept = store.add("api", "我自己的註記");
+  const before = store.get(kept.id);
+  const result = store.mergeSkipExisting([
+    { id: kept.id, front: "other", back: "不該蓋掉" },
+    { id: "tech-002", front: "API", back: "應用程式介面" },
+    { id: "tech-003", front: "endpoint", back: "端點" },
+    { front: "   ", back: "略過" },
+  ]);
+  assert.equal(result.added, 1);
+  assert.equal(result.skipped, 3);
+  assert.equal(store.stats().total, 2);
+  assert.deepEqual(store.get(kept.id), before);
+  assert.equal(store.get("tech-003").back, "端點");
+  assert.equal(store.get("tech-002"), null);
+
+  const again = store.mergeSkipExisting([{ id: "tech-003", front: "endpoint", back: "改寫" }]);
+  assert.equal(again.added, 0);
+  assert.equal(store.get("tech-003").back, "端點");
+});
+
 test("corrupt storage is not overwritten by a new card", () => {
   const storage = memory();
   storage.setItem(STORAGE_KEY, "{not json");

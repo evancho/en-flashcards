@@ -10,6 +10,9 @@ const EXAMPLES = [
   ["quiet", "安靜的"],
 ];
 
+const STARTER_DECK = "decks/tech-english-100.json";
+const STARTER_LABEL = "載入科技英文 100 詞";
+
 const store = createStore(localStorage);
 const state = {
   view: "review",
@@ -19,6 +22,7 @@ const state = {
   editingId: null,
   toastTimer: 0,
   saving: false,
+  loadingDeck: false,
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -157,6 +161,7 @@ function renderReview() {
       $("#empty-title").textContent = "資料讀不出來";
       $("#empty-body").textContent = "先到備份下載原始資料，或清除後重來。";
       $("#empty-examples").hidden = true;
+      $("#empty-load-deck").hidden = true;
       $("#empty-recheck").hidden = true;
       $("#empty-add").hidden = true;
       return;
@@ -166,12 +171,14 @@ function renderReview() {
       $("#empty-title").textContent = "還沒有單字";
       $("#empty-body").textContent = "加上英文和背面，就可以開始複習。";
       $("#empty-examples").hidden = false;
+      $("#empty-load-deck").hidden = false;
       $("#empty-recheck").hidden = true;
       $("#empty-add").hidden = false;
     } else {
       $("#empty-title").textContent = "這輪沒有待複習的單字";
       $("#empty-body").textContent = next ? `下一張在 ${formatDelay(next - Date.now())}後` : "稍後再來看看。";
       $("#empty-examples").hidden = true;
+      $("#empty-load-deck").hidden = true;
       $("#empty-recheck").hidden = false;
       $("#empty-add").hidden = false;
     }
@@ -366,6 +373,54 @@ async function removeCard(id) {
   }
   toast("已刪除");
   render();
+}
+
+async function loadStarterDeck() {
+  if (state.loadingDeck) return;
+  state.loadingDeck = true;
+  const buttons = [...document.querySelectorAll("#load-deck, #empty-load-deck")];
+  for (const button of buttons) {
+    button.disabled = true;
+    button.textContent = "載入中…";
+  }
+  try {
+    let response;
+    try {
+      response = await fetch(STARTER_DECK);
+    } catch {
+      toast("請連上網路打開一次，才能載入這 100 詞。");
+      return;
+    }
+    if (!response.ok) {
+      toast("請連上網路打開一次，才能載入這 100 詞。");
+      return;
+    }
+    let list;
+    try {
+      list = parseImport(await response.text());
+    } catch {
+      toast("這份詞庫讀不出來。");
+      return;
+    }
+    const result = store.mergeSkipExisting(list);
+    state.queue = [];
+    state.current = null;
+    state.revealed = false;
+    if (result.added > 0 && state.view === "review") refreshQueue();
+    if (result.added === 0) toast(`已加入 0 張，這些詞都已經在詞庫裡`);
+    else if (result.skipped > 0) toast(`已加入 ${result.added} 張，略過 ${result.skipped} 張已有的`);
+    else toast(`已加入 ${result.added} 張`);
+    render();
+  } catch (error) {
+    toast(explainError(error));
+    render();
+  } finally {
+    state.loadingDeck = false;
+    for (const button of buttons) {
+      button.disabled = false;
+      button.textContent = STARTER_LABEL;
+    }
+  }
 }
 
 function addExamples() {
@@ -586,6 +641,8 @@ function bind() {
     openView("add");
   });
   $("#empty-examples").addEventListener("click", addExamples);
+  $("#empty-load-deck").addEventListener("click", loadStarterDeck);
+  $("#load-deck").addEventListener("click", loadStarterDeck);
   $("#empty-recheck").addEventListener("click", () => {
     state.queue = [];
     state.current = null;

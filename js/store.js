@@ -214,6 +214,28 @@ export function createStore(storage) {
       persist(next);
       return { added, updated, skipped, total: next.length };
     },
+    mergeSkipExisting(list) {
+      const cards = requireCards();
+      const ids = new Set(cards.map((card) => card.id));
+      const fronts = new Set(cards.map((card) => card.front.trim().toLowerCase()));
+      const next = cards.slice();
+      let added = 0;
+      let skipped = 0;
+      for (const raw of list) {
+        const card = normalizeCard(raw);
+        const frontKey = card ? card.front.trim().toLowerCase() : "";
+        if (!card || ids.has(card.id) || fronts.has(frontKey)) {
+          skipped += 1;
+          continue;
+        }
+        ids.add(card.id);
+        fronts.add(frontKey);
+        next.push(card);
+        added += 1;
+      }
+      if (added > 0) persist(next);
+      return { added, skipped, total: next.length };
+    },
     reset() {
       try {
         storage.removeItem(STORAGE_KEY);
