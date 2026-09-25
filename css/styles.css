@@ -159,6 +159,23 @@ main {
 
 h2 { margin: 0; font-size: 1.25rem; }
 
+#view-review:not([hidden]) {
+  overflow: hidden;
+  gap: 8px;
+}
+
+#review-card-wrap { overflow: hidden; }
+
+#view-review .flashcard {
+  min-height: 0;
+  overflow: auto;
+}
+
+#review-empty {
+  min-height: 0;
+  overflow: auto;
+}
+
 .review-settings {
   display: flex;
   align-items: center;
