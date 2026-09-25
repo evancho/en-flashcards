@@ -27,7 +27,7 @@ test("page points at the manifest, stylesheet, script, and icons", () => {
     "有點生",
     "會了",
     "很熟",
-    "從詞庫選一套",
+    "去詞庫選一套",
   ]) {
     assert.ok(html.includes(needle), needle);
   }
@@ -35,25 +35,43 @@ test("page points at the manifest, stylesheet, script, and icons", () => {
   assert.equal(html.includes('id="load-deck"'), false);
   assert.equal(html.includes('id="empty-load-deck"'), false);
   const app = readFileSync(new URL("../js/app.js", import.meta.url), "utf8");
+  assert.match(html, /data-view="decks">詞庫/);
+  assert.match(html, /data-view="list">單字/);
+  const decks = html.slice(html.indexOf('id="view-decks"'), html.indexOf('id="view-backup"'));
+  const backup = html.slice(html.indexOf('id="view-backup"'), html.indexOf("</main>"));
+  assert.match(decks, /載入所選/);
+  assert.match(decks, /全選/);
+  assert.match(decks, /清除選取/);
+  assert.match(decks, /id="deck-search"/);
+  assert.match(decks, /id="deck-categories"/);
+  assert.match(app, /沒有符合的詞庫/);
+  assert.match(app, /function visibleDeckBoxes/);
+  assert.equal(backup.includes("deck-list"), false);
+  assert.equal(backup.includes("載入所選"), false);
+  assert.equal(html.includes("載入／更新"), false);
   assert.match(app, /const DECK_CATALOG = "decks\/index\.json"/);
-  assert.match(app, /載入／更新/);
-  const loader = app.slice(app.indexOf("async function loadDeck"), app.indexOf("function addExamples"));
+  assert.match(app, /載入所選/);
+  assert.match(app, /if \(name === "decks"\) loadCatalog\(\)/);
+  assert.match(app, /openView\("decks"\)/);
+  assert.equal(app.includes("載入／更新"), false);
+  const loader = app.slice(app.indexOf("async function loadSelectedDecks"), app.indexOf("function addExamples"));
   assert.match(loader, /fetch\(path\)/);
   assert.match(loader, /mergeSkipExisting/);
   assert.doesNotMatch(loader, /replaceAll/);
   const catalog = JSON.parse(readFileSync(new URL("../decks/index.json", import.meta.url), "utf8"));
   const expectedDecks = [
-    ["tech-english-100", "科技英文 100 詞", "decks/tech-english-100.json"],
-    ["daily-english-100", "生活用語 100", "decks/daily-english-100.json"],
-    ["travel-english-100", "旅行用語 100", "decks/travel-english-100.json"],
-    ["business-english-100", "商業用語 100", "decks/business-english-100.json"],
+    ["tech-english-100", "科技英文 100 詞", "decks/tech-english-100.json", "科技"],
+    ["daily-english-100", "生活用語 100", "decks/daily-english-100.json", "生活"],
+    ["travel-english-100", "旅行用語 100", "decks/travel-english-100.json", "旅行"],
+    ["business-english-100", "商業用語 100", "decks/business-english-100.json", "商業"],
   ];
   assert.equal(catalog.decks.length, expectedDecks.length);
   catalog.decks.forEach((entry, index) => {
-    const [id, title, path] = expectedDecks[index];
+    const [id, title, path, category] = expectedDecks[index];
     assert.equal(entry.id, id);
     assert.equal(entry.title, title);
     assert.equal(entry.path, path);
+    assert.equal(entry.category, category);
     assert.equal(entry.count, 100);
     assert.equal(typeof entry.description, "string");
     assert.ok(entry.description.length >= 8, entry.id);
@@ -73,11 +91,18 @@ test("page points at the manifest, stylesheet, script, and icons", () => {
   });
   assert.match(html, /發音/);
   assert.match(html, /朗讀例句/);
-  assert.match(html, /版本 v4 · 詞庫列表/);
+  assert.match(html, /版本 v8 · 隨機與先中文/);
+  const review = html.slice(html.indexOf('id="view-review"'), html.indexOf('id="view-add"'));
+  assert.match(review, /先英文/);
+  assert.match(review, /先中文/);
+  assert.match(review, /隨機順序/);
+  assert.match(app, /shuffleInPlace/);
+  assert.match(readFileSync(new URL("../js/review.js", import.meta.url), "utf8"), /en-flashcards\.settings/);
   const worker = readFileSync(new URL("../sw.js", import.meta.url), "utf8");
-  assert.match(worker, /const CACHE = "en-flashcards-v4"/);
+  assert.match(worker, /const CACHE = "en-flashcards-v8"/);
   assert.match(worker, /keys\.filter\(\(key\) => key !== CACHE\)/);
   assert.match(worker, /js\/speech\.js/);
   assert.match(worker, /js\/highlight\.js/);
+  assert.match(worker, /js\/review\.js/);
   assert.equal(readFileSync(new URL("../js/store.js", import.meta.url), "utf8").includes('STORAGE_KEY = "en-flashcards.v1"'), true);
 });

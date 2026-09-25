@@ -1,4 +1,4 @@
-const CACHE = "en-flashcards-v4";
+const CACHE = "en-flashcards-v8";
 
 const ASSETS = [
   "./index.html",
@@ -6,6 +6,7 @@ const ASSETS = [
   "./js/app.js",
   "./js/speech.js",
   "./js/highlight.js",
+  "./js/review.js",
   "./js/srs.js",
   "./js/store.js",
   "./manifest.webmanifest",

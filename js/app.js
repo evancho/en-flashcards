@@ -2,6 +2,7 @@ import { createStore, parseImport } from "./store.js";
 import { formatDelay, previewPlan, stageLabel, formatDue } from "./srs.js";
 import { prepareVoices, speakEnglish, speechAvailable } from "./speech.js";
 import { findTermRanges } from "./highlight.js";
+import { readSettings, shuffleInPlace, writeSettings } from "./review.js";
 
 const TIP_KEY = "en-flashcards.ios-tip";
 const EXAMPLES = [
@@ -15,6 +16,7 @@ const EXAMPLES = [
 const DECK_CATALOG = "decks/index.json";
 
 const store = createStore(localStorage);
+const settings = readSettings(localStorage);
 const state = {
   view: "review",
   queue: [],
@@ -24,6 +26,7 @@ const state = {
   toastTimer: 0,
   saving: false,
   loadingDeck: false,
+  deckCategory: "",
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -113,11 +116,37 @@ function refreshQueue() {
   const extras = cards
     .filter((card) => card.due <= now && !seen.has(card.id))
     .sort((a, b) => a.due - b.due || a.createdAt - b.createdAt);
+  if (settings.random) shuffleInPlace(extras);
   state.queue.push(...extras);
   if (!state.current) {
     state.current = state.queue.shift() || null;
     state.revealed = false;
   }
+}
+
+function persistSettings() {
+  try {
+    writeSettings(localStorage, settings);
+  } catch {
+    toast("無法記住這個設定");
+  }
+}
+
+function renderReviewSettings() {
+  $("#dir-en").setAttribute("aria-pressed", settings.reverse ? "false" : "true");
+  $("#dir-zh").setAttribute("aria-pressed", settings.reverse ? "true" : "false");
+  $("#random-order").setAttribute("aria-pressed", settings.random ? "true" : "false");
+}
+
+function paintCard() {
+  const card = state.current;
+  if (!card) return;
+  const prompt = $("#card-front");
+  const answer = $("#card-back");
+  prompt.textContent = settings.reverse ? card.back : card.front;
+  answer.textContent = settings.reverse ? card.front : card.back;
+  prompt.lang = settings.reverse ? "zh-Hant" : "en";
+  answer.lang = settings.reverse ? "en" : "zh-Hant";
 }
 
 function setRevealed(on) {
@@ -129,7 +158,7 @@ function setRevealed(on) {
   $("#card-back").hidden = !on;
   $("#card-prompt").hidden = on;
   $("#ratings").hidden = !on;
-  $("#card-kicker").textContent = on ? "答案" : "英文";
+  $("#card-kicker").textContent = on ? "答案" : settings.reverse ? "中文" : "英文";
   const example = state.current?.example || "";
   const exampleZh = state.current?.exampleZh || "";
   $("#example-block").hidden = !on || !example;
@@ -137,7 +166,7 @@ function setRevealed(on) {
   $("#card-example-zh").textContent = exampleZh;
   $("#card-example-zh").hidden = !exampleZh;
   const canSpeak = speechAvailable();
-  $("#speak-front").hidden = !canSpeak;
+  $("#speak-front").hidden = !canSpeak || (settings.reverse && !on);
   $("#speak-example").hidden = !canSpeak;
   $("#speech-note").hidden = canSpeak;
 }
@@ -161,6 +190,7 @@ function renderChrome() {
 }
 
 function renderReview() {
+  renderReviewSettings();
   const stats = store.stats();
   const wrap = $("#review-card-wrap");
   const empty = $("#review-empty");
@@ -200,8 +230,7 @@ function renderReview() {
   empty.hidden = true;
   const left = state.queue.length + 1;
   $("#review-count").textContent = `這輪剩下 ${left} 張`;
-  $("#card-front").textContent = state.current.front;
-  $("#card-back").textContent = state.current.back;
+  paintCard();
   setRevealed(state.revealed);
   const plan = previewPlan(state.current, Date.now());
   for (const [rating, item] of Object.entries(plan)) {
@@ -305,7 +334,7 @@ function openView(name) {
   state.view = name;
   if (name === "review") refreshQueue();
   render();
-  if (name === "backup") loadCatalog();
+  if (name === "decks") loadCatalog();
   if (name === "add") $("#front").focus();
 }
 
@@ -471,12 +500,82 @@ function deckPath(path) {
   return value;
 }
 
-function reportDeckMerge(result) {
-  if (result.added > 0 && result.filled > 0) toast(`已加入 ${result.added} 張，並補上 ${result.filled} 張例句`);
-  else if (result.added > 0 && result.skipped > 0) toast(`已加入 ${result.added} 張，略過 ${result.skipped} 張已有的`);
-  else if (result.added > 0) toast(`已加入 ${result.added} 張`);
-  else if (result.filled > 0) toast(`已補上 ${result.filled} 張例句`);
+function reportSelectedMerge(added, filled, skipped) {
+  if (added > 0 && filled > 0) toast(`已加入 ${added} 張、補上 ${filled} 張例句`);
+  else if (added > 0 && skipped > 0) toast(`已加入 ${added} 張，略過 ${skipped} 張已有的`);
+  else if (added > 0) toast(`已加入 ${added} 張`);
+  else if (filled > 0) toast(`已補上 ${filled} 張例句`);
   else toast("已加入 0 張，這些詞都已經在詞庫裡");
+}
+
+function selectedDeckBoxes() {
+  return [...document.querySelectorAll("#deck-list .deck-check")];
+}
+
+function visibleDeckBoxes() {
+  return selectedDeckBoxes().filter((box) => !box.closest(".deck-row")?.hidden);
+}
+
+function syncDeckSelection() {
+  const boxes = selectedDeckBoxes();
+  const selected = boxes.filter((box) => box.checked).length;
+  const busy = state.loadingDeck;
+  const button = $("#load-selected");
+  button.disabled = busy || selected === 0;
+  button.textContent = busy ? "載入中…" : "載入所選";
+  $("#deck-selected").textContent = `已選 ${selected} 套`;
+  $("#deck-select-all").disabled = busy || visibleDeckBoxes().length === 0;
+  $("#deck-clear").disabled = busy || selected === 0;
+  for (const box of boxes) box.disabled = busy;
+}
+
+function deckCategoryName(deck) {
+  return String(deck?.category || "").trim();
+}
+
+function renderCategoryChips(decks) {
+  const bar = $("#deck-categories");
+  const names = [];
+  for (const deck of decks) {
+    const name = deckCategoryName(deck);
+    if (name && !names.includes(name)) names.push(name);
+  }
+  if (state.deckCategory && !names.includes(state.deckCategory)) state.deckCategory = "";
+  bar.replaceChildren();
+  for (const name of ["", ...names]) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "chip";
+    button.role = "tab";
+    button.dataset.category = name;
+    button.textContent = name || "全部";
+    button.setAttribute("aria-pressed", name === state.deckCategory ? "true" : "false");
+    bar.append(button);
+  }
+  bar.hidden = names.length === 0;
+}
+
+function rowMatchesFilter(row) {
+  if (state.deckCategory && row.dataset.category !== state.deckCategory) return false;
+  const query = $("#deck-search").value.trim().toLowerCase();
+  if (!query) return true;
+  const haystack = `${row.dataset.title || ""} ${row.dataset.description || ""}`.toLowerCase();
+  return haystack.includes(query);
+}
+
+function applyDeckFilter() {
+  const rows = [...document.querySelectorAll("#deck-list .deck-row")];
+  if (!rows.length) return;
+  let shown = 0;
+  for (const row of rows) {
+    const match = rowMatchesFilter(row);
+    row.hidden = !match;
+    if (match) shown += 1;
+  }
+  const note = $("#deck-catalog-note");
+  note.hidden = shown > 0;
+  note.textContent = shown > 0 ? "" : "沒有符合的詞庫";
+  syncDeckSelection();
 }
 
 let catalogToken = 0;
@@ -502,11 +601,16 @@ async function loadCatalog() {
     }
     note.hidden = shown > 0;
     note.textContent = shown > 0 ? "" : "目前沒有可載入的詞庫。";
+    renderCategoryChips(decks);
+    applyDeckFilter();
   } catch {
     if (token !== catalogToken) return;
     list.replaceChildren();
+    $("#deck-categories").replaceChildren();
+    $("#deck-categories").hidden = true;
     note.hidden = false;
     note.textContent = "請連上網路打開一次，才能看到詞庫。";
+    syncDeckSelection();
     toast("請連上網路打開一次，才能看到詞庫。");
   }
 }
@@ -515,8 +619,17 @@ function deckRow(deck) {
   const path = deckPath(deck?.path);
   const title = String(deck?.title || "").trim();
   if (!path || !title) return null;
-  const row = document.createElement("article");
+  const row = document.createElement("label");
   row.className = "deck-row";
+  row.dataset.category = deckCategoryName(deck);
+  row.dataset.title = title;
+  row.dataset.description = String(deck.description || "").trim();
+  const box = document.createElement("input");
+  box.type = "checkbox";
+  box.className = "deck-check";
+  box.value = path;
+  const copy = document.createElement("span");
+  copy.className = "deck-copy";
   const heading = document.createElement("h3");
   heading.textContent = title;
   const description = document.createElement("p");
@@ -528,53 +641,63 @@ function deckRow(deck) {
   meta.className = "hint";
   meta.textContent = Number.isFinite(count) && count >= 0 ? `${count} 張` : "";
   if (!meta.textContent) meta.hidden = true;
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "btn";
-  button.textContent = "載入／更新";
-  button.addEventListener("click", () => loadDeck(path, button));
-  row.append(heading, description, meta, button);
+  copy.append(heading, description, meta);
+  row.append(box, copy);
   return row;
 }
 
-async function loadDeck(path, button) {
+async function loadSelectedDecks() {
   if (state.loadingDeck) return;
+  const paths = selectedDeckBoxes()
+    .filter((box) => box.checked)
+    .map((box) => deckPath(box.value))
+    .filter(Boolean);
+  if (!paths.length) return;
   state.loadingDeck = true;
-  button.disabled = true;
-  button.textContent = "載入中…";
+  syncDeckSelection();
+  let added = 0;
+  let filled = 0;
+  let skipped = 0;
+  let failed = 0;
   try {
-    let response;
-    try {
-      response = await fetch(path);
-    } catch {
-      toast("請連上網路打開一次，才能載入詞庫。");
-      return;
+    for (const path of paths) {
+      let response;
+      try {
+        response = await fetch(path);
+      } catch {
+        failed += 1;
+        continue;
+      }
+      if (!response.ok) {
+        failed += 1;
+        continue;
+      }
+      let list;
+      try {
+        list = parseImport(await response.text());
+      } catch {
+        failed += 1;
+        continue;
+      }
+      const result = store.mergeSkipExisting(list);
+      added += result.added;
+      filled += result.filled;
+      skipped += result.skipped;
     }
-    if (!response.ok) {
-      toast("請連上網路打開一次，才能載入詞庫。");
-      return;
-    }
-    let list;
-    try {
-      list = parseImport(await response.text());
-    } catch {
-      toast("這份詞庫讀不出來。");
-      return;
-    }
-    const result = store.mergeSkipExisting(list);
     state.queue = [];
     state.current = null;
     state.revealed = false;
-    if ((result.added > 0 || result.filled > 0) && state.view === "review") refreshQueue();
-    reportDeckMerge(result);
+    if ((added > 0 || filled > 0) && state.view === "review") refreshQueue();
+    if (failed === paths.length) toast("請連上網路打開一次，才能載入詞庫。");
+    else if (failed > 0) toast(`已加入 ${added} 張、補上 ${filled} 張例句。有 ${failed} 套沒讀到，請連上網路再試。`);
+    else reportSelectedMerge(added, filled, skipped);
     render();
   } catch (error) {
     toast(explainError(error));
     render();
   } finally {
     state.loadingDeck = false;
-    button.disabled = false;
-    button.textContent = "載入／更新";
+    syncDeckSelection();
   }
 }
 
@@ -810,9 +933,51 @@ function bind() {
   });
   $("#empty-examples").addEventListener("click", addExamples);
   $("#empty-open-decks").addEventListener("click", () => {
-    openView("backup");
-    $("#deck-catalog").scrollIntoView({ block: "start" });
+    openView("decks");
   });
+  $("#dir-en").addEventListener("click", () => {
+    if (settings.reverse) {
+      settings.reverse = false;
+      persistSettings();
+      render();
+    }
+  });
+  $("#dir-zh").addEventListener("click", () => {
+    if (!settings.reverse) {
+      settings.reverse = true;
+      persistSettings();
+      render();
+    }
+  });
+  $("#random-order").addEventListener("click", () => {
+    settings.random = !settings.random;
+    if (settings.random) shuffleInPlace(state.queue);
+    else state.queue.sort((a, b) => a.due - b.due || a.createdAt - b.createdAt);
+    persistSettings();
+    render();
+  });
+  $("#deck-list").addEventListener("change", (event) => {
+    if (event.target.classList?.contains("deck-check")) syncDeckSelection();
+  });
+  $("#deck-select-all").addEventListener("click", () => {
+    for (const box of visibleDeckBoxes()) box.checked = true;
+    syncDeckSelection();
+  });
+  $("#deck-categories").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-category]");
+    if (!button) return;
+    state.deckCategory = button.dataset.category || "";
+    for (const chip of document.querySelectorAll("#deck-categories .chip")) {
+      chip.setAttribute("aria-pressed", chip === button ? "true" : "false");
+    }
+    applyDeckFilter();
+  });
+  $("#deck-search").addEventListener("input", () => applyDeckFilter());
+  $("#deck-clear").addEventListener("click", () => {
+    for (const box of selectedDeckBoxes()) box.checked = false;
+    syncDeckSelection();
+  });
+  $("#load-selected").addEventListener("click", loadSelectedDecks);
   $("#empty-recheck").addEventListener("click", () => {
     state.queue = [];
     state.current = null;
