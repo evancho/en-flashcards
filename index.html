@@ -60,27 +60,29 @@
           <p id="review-count" class="session-count" aria-live="polite"></p>
           <div id="review-card-wrap" class="card-wrap">
             <div id="flashcard" class="flashcard">
-              <div id="card-face" class="card-face" role="button" tabindex="0">
-                <span id="card-kicker" class="kicker">英文</span>
-                <span id="card-front" class="word" lang="en"></span>
-                <span id="card-back" class="meaning" lang="zh-Hant" hidden></span>
-                <span id="card-prompt" class="prompt">輕點看答案</span>
-              </div>
-              <button type="button" class="speak" id="speak-front">發音</button>
-              <p id="card-breakdown" class="breakdown" hidden>
-                <span class="kicker">字根拆解</span>
-                <span id="card-breakdown-text"></span>
-              </p>
-              <div id="example-block" class="example-block" hidden>
-                <span class="kicker">例句</span>
-                <p id="card-example" class="example-line" lang="en"></p>
-                <p id="card-example-zh" class="example-zh" lang="zh-Hant" hidden></p>
-                <div class="speak-row">
-                  <button type="button" class="speak" id="speak-example">朗讀例句</button>
-                  <button type="button" class="speak" id="speak-example-zh" hidden>朗讀中文</button>
+              <div id="card-body" class="card-body">
+                <div id="card-face" class="card-face" role="button" tabindex="0">
+                  <span id="card-kicker" class="kicker">英文</span>
+                  <span id="card-front" class="word" lang="en"></span>
+                  <span id="card-back" class="meaning" lang="zh-Hant" hidden></span>
+                  <span id="card-prompt" class="prompt">輕點看答案</span>
                 </div>
+                <p id="card-breakdown" class="breakdown" hidden>
+                  <span class="kicker">字根拆解</span>
+                  <span id="card-breakdown-text"></span>
+                </p>
+                <div id="example-block" class="example-block" hidden>
+                  <span class="kicker">例句</span>
+                  <p id="card-example" class="example-line" lang="en"></p>
+                  <p id="card-example-zh" class="example-zh" lang="zh-Hant" hidden></p>
+                </div>
+                <p id="speech-note" class="hint" hidden>這台裝置無法朗讀。</p>
               </div>
-              <p id="speech-note" class="hint" hidden>這台裝置無法朗讀。</p>
+              <div id="review-speak" class="speak-row">
+                <button type="button" class="speak" id="speak-front" aria-label="朗讀單字">單字</button>
+                <button type="button" class="speak" id="speak-example" aria-label="朗讀例句" hidden>例句</button>
+                <button type="button" class="speak" id="speak-example-zh" aria-label="朗讀中文" hidden>中文</button>
+              </div>
             </div>
             <div id="ratings" class="ratings" hidden>
               <button type="button" class="rate rate-again" data-rating="again">
@@ -220,7 +222,7 @@
 
         <section id="view-backup" class="view scroll" hidden>
           <h2>備份</h2>
-          <p class="hint" id="app-version">版本 v12 · 字根拆解</p>
+          <p class="hint" id="app-version">版本 v13 · 朗讀同一頁</p>
           <p class="lede">單字存在這個畫面所在的瀏覽器或主畫面圖示裡，不會上傳。</p>
           <p class="stat-line">這台裝置 <strong id="stat-total">0</strong> 張，待複習 <strong id="stat-due">0</strong> 張。</p>
           <p id="offline-flag" class="hint" hidden>網頁已存進這台裝置，斷線後從圖示打開仍可使用。</p>

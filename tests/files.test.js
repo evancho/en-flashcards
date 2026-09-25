@@ -92,7 +92,11 @@ test("page points at the manifest, stylesheet, script, and icons", () => {
   assert.match(html, /發音/);
   assert.match(html, /朗讀例句/);
   assert.match(html, /朗讀中文/);
-  assert.match(html, /版本 v12 · 字根拆解/);
+  assert.match(html, /版本 v13 · 朗讀同一頁/);
+  const reviewSpeak = html.slice(html.indexOf('id="review-speak"'), html.indexOf('id="ratings"'));
+  assert.match(reviewSpeak, />單字</);
+  assert.match(reviewSpeak, />例句</);
+  assert.match(reviewSpeak, />中文</);
   assert.match(html, /id="card-breakdown"/);
   assert.match(html, /id="commute-breakdown"/);
   assert.match(html, /id="breakdown"/);
@@ -133,7 +137,7 @@ test("page points at the manifest, stylesheet, script, and icons", () => {
   assert.match(app, /shuffleInPlace/);
   assert.match(readFileSync(new URL("../js/review.js", import.meta.url), "utf8"), /en-flashcards\.settings/);
   const worker = readFileSync(new URL("../sw.js", import.meta.url), "utf8");
-  assert.match(worker, /const CACHE = "en-flashcards-v12"/);
+  assert.match(worker, /const CACHE = "en-flashcards-v13"/);
   assert.match(worker, /keys\.filter\(\(key\) => key !== CACHE\)/);
   assert.match(worker, /js\/speech\.js/);
   assert.match(worker, /js\/highlight\.js/);
