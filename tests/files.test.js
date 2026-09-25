@@ -92,7 +92,30 @@ test("page points at the manifest, stylesheet, script, and icons", () => {
   assert.match(html, /發音/);
   assert.match(html, /朗讀例句/);
   assert.match(html, /朗讀中文/);
-  assert.match(html, /版本 v11 · 通勤橫放/);
+  assert.match(html, /版本 v12 · 字根拆解/);
+  assert.match(html, /id="card-breakdown"/);
+  assert.match(html, /id="commute-breakdown"/);
+  assert.match(html, /id="breakdown"/);
+  const tech = catalog.decks.find((entry) => entry.id === "tech-english-100");
+  const techDeck = JSON.parse(readFileSync(new URL(`../${tech.path}`, import.meta.url), "utf8"));
+  const withParts = techDeck.cards.filter((card) => card.breakdown);
+  assert.ok(withParts.length >= 55, `breakdown count ${withParts.length}`);
+  const skipped = new Set(["API", "JSON", "bug", "algorithm", "Docker", "Kubernetes", "deploy", "proxy", "SLA"]);
+  const present = new Set(["microservice", "malware", "encryption", "firewall", "endpoint"]);
+  for (const card of techDeck.cards) {
+    if (skipped.has(card.front)) assert.equal(card.breakdown, undefined, card.front);
+    if (card.breakdown) {
+      assert.ok(card.breakdown.includes("→"), card.front);
+      assert.ok(card.breakdown.length <= 80, card.front);
+      assert.equal(card.breakdown.includes("\n"), false, card.front);
+    }
+    if (present.has(card.front)) assert.equal(typeof card.breakdown, "string", card.front);
+  }
+  for (const entry of catalog.decks) {
+    if (entry.id === "tech-english-100") continue;
+    const deck = JSON.parse(readFileSync(new URL(`../${entry.path}`, import.meta.url), "utf8"));
+    assert.equal(deck.cards.some((card) => card.breakdown), false, entry.id);
+  }
   assert.match(html, /id="open-commute"/);
   const commuteView = html.slice(html.indexOf('id="view-commute"'), html.indexOf('id="view-add"'));
   assert.match(commuteView, /播放/);
@@ -110,7 +133,7 @@ test("page points at the manifest, stylesheet, script, and icons", () => {
   assert.match(app, /shuffleInPlace/);
   assert.match(readFileSync(new URL("../js/review.js", import.meta.url), "utf8"), /en-flashcards\.settings/);
   const worker = readFileSync(new URL("../sw.js", import.meta.url), "utf8");
-  assert.match(worker, /const CACHE = "en-flashcards-v11"/);
+  assert.match(worker, /const CACHE = "en-flashcards-v12"/);
   assert.match(worker, /keys\.filter\(\(key\) => key !== CACHE\)/);
   assert.match(worker, /js\/speech\.js/);
   assert.match(worker, /js\/highlight\.js/);

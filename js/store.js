@@ -4,6 +4,7 @@ export const STORAGE_KEY = "en-flashcards.v1";
 const MAX_FRONT = 300;
 const MAX_BACK = 1000;
 const MAX_EXAMPLE = 500;
+const MAX_BREAKDOWN = 300;
 
 function optionalText(value, max) {
   const text = String(value ?? "").trim().slice(0, max);
@@ -46,8 +47,10 @@ export function normalizeCard(raw, now = Date.now()) {
   };
   const example = optionalText(raw.example, MAX_EXAMPLE);
   const exampleZh = optionalText(raw.exampleZh, MAX_EXAMPLE);
+  const breakdown = optionalText(raw.breakdown, MAX_BREAKDOWN);
   if (example) card.example = example;
   if (exampleZh) card.exampleZh = exampleZh;
+  if (breakdown) card.breakdown = breakdown;
   return card;
 }
 
@@ -60,6 +63,10 @@ function fillMissingExample(existing, incoming) {
   }
   if (!existing.exampleZh && incoming.exampleZh) {
     next.exampleZh = incoming.exampleZh;
+    changed = true;
+  }
+  if (!existing.breakdown && incoming.breakdown) {
+    next.breakdown = incoming.breakdown;
     changed = true;
   }
   return changed ? next : null;
@@ -142,6 +149,7 @@ export function createStore(storage) {
         back,
         example: extras.example,
         exampleZh: extras.exampleZh,
+        breakdown: extras.breakdown,
         createdAt: now,
         updatedAt: now,
         due: now,
@@ -181,6 +189,7 @@ export function createStore(storage) {
         if (extras) {
           patch.example = extras.example ?? "";
           patch.exampleZh = extras.exampleZh ?? "";
+          patch.breakdown = extras.breakdown ?? "";
         }
         const updated = normalizeCard(patch, now);
         if (!updated) {

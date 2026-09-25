@@ -67,6 +67,10 @@
                 <span id="card-prompt" class="prompt">輕點看答案</span>
               </div>
               <button type="button" class="speak" id="speak-front">發音</button>
+              <p id="card-breakdown" class="breakdown" hidden>
+                <span class="kicker">字根拆解</span>
+                <span id="card-breakdown-text"></span>
+              </p>
               <div id="example-block" class="example-block" hidden>
                 <span class="kicker">例句</span>
                 <p id="card-example" class="example-line" lang="en"></p>
@@ -117,6 +121,7 @@
             <div id="commute-card" class="commute-card">
               <p id="commute-en" class="word" lang="en"></p>
               <p id="commute-zh" class="meaning" lang="zh-Hant"></p>
+              <p id="commute-breakdown" class="breakdown" hidden></p>
               <p id="commute-example" class="example-line" lang="en" hidden></p>
               <p id="commute-example-zh" class="example-zh" lang="zh-Hant" hidden></p>
             </div>
@@ -161,6 +166,10 @@
             <label>
               例句中文（可空白）
               <textarea id="example-zh" name="example-zh" maxlength="500" rows="2" lang="zh-Hant" placeholder="這個 API 回傳 JSON。"></textarea>
+            </label>
+            <label>
+              字根拆解（可空白）
+              <textarea id="breakdown" name="breakdown" maxlength="300" rows="2" lang="zh-Hant" placeholder="end + point → 末端 + 點"></textarea>
             </label>
             <div class="row">
               <button type="button" class="btn secondary" id="speak-form-front">發音</button>
@@ -211,7 +220,7 @@
 
         <section id="view-backup" class="view scroll" hidden>
           <h2>備份</h2>
-          <p class="hint" id="app-version">版本 v11 · 通勤橫放</p>
+          <p class="hint" id="app-version">版本 v12 · 字根拆解</p>
           <p class="lede">單字存在這個畫面所在的瀏覽器或主畫面圖示裡，不會上傳。</p>
           <p class="stat-line">這台裝置 <strong id="stat-total">0</strong> 張，待複習 <strong id="stat-due">0</strong> 張。</p>
           <p id="offline-flag" class="hint" hidden>網頁已存進這台裝置，斷線後從圖示打開仍可使用。</p>

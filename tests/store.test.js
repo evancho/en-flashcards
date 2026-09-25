@@ -156,6 +156,48 @@ test("reloading fills a missing Chinese gloss and keeps the English example", ()
   assert.equal(after.due, reviewed.due);
 });
 
+test("reloading fills a missing breakdown and keeps review progress", () => {
+  const store = createStore(memory());
+  const card = store.add("endpoint", "我自己的註記", 1_700_000_000_000, {
+    example: "This endpoint lists tickets.",
+    breakdown: "   ",
+  });
+  assert.equal(card.breakdown, undefined);
+  const reviewed = store.review(card.id, "good");
+  const result = store.mergeSkipExisting([
+    {
+      id: "tech-002",
+      front: "Endpoint",
+      back: "端點",
+      example: "A different sentence.",
+      breakdown: "end + point → 末端 + 點",
+      interval: 0,
+      ease: 2.5,
+      reps: 0,
+      lapses: 9,
+      due: 1,
+    },
+  ]);
+  assert.equal(result.added, 0);
+  assert.equal(result.filled, 1);
+  const after = store.get(card.id);
+  assert.equal(after.breakdown, "end + point → 末端 + 點");
+  assert.equal(after.example, "This endpoint lists tickets.");
+  assert.equal(after.back, "我自己的註記");
+  assert.equal(after.interval, reviewed.interval);
+  assert.equal(after.ease, reviewed.ease);
+  assert.equal(after.reps, reviewed.reps);
+  assert.equal(after.lapses, reviewed.lapses);
+  assert.equal(after.due, reviewed.due);
+  const second = store.mergeSkipExisting([
+    { id: "tech-002", front: "endpoint", back: "端點", breakdown: "別的拆法" },
+  ]);
+  assert.equal(second.filled, 0);
+  assert.equal(second.added, 0);
+  assert.equal(store.get(card.id).breakdown, "end + point → 末端 + 點");
+  assert.equal(store.get(card.id).interval, reviewed.interval);
+});
+
 test("corrupt storage is not overwritten by a new card", () => {
   const storage = memory();
   storage.setItem(STORAGE_KEY, "{not json");
