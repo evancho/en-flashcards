@@ -26,7 +26,16 @@ test("page points at the manifest, stylesheet, script, and icons", () => {
     "有點生",
     "會了",
     "很熟",
+    "載入科技英文 100 詞",
   ]) {
     assert.ok(html.includes(needle), needle);
   }
+  const app = readFileSync(new URL("../js/app.js", import.meta.url), "utf8");
+  assert.match(app, /const STARTER_DECK = "decks\/tech-english-100\.json"/);
+  const loader = app.slice(app.indexOf("async function loadStarterDeck"), app.indexOf("function addExamples"));
+  assert.match(loader, /fetch\(STARTER_DECK\)/);
+  assert.match(loader, /mergeSkipExisting/);
+  assert.doesNotMatch(loader, /replaceAll/);
+  const deck = JSON.parse(readFileSync(new URL("../decks/tech-english-100.json", import.meta.url), "utf8"));
+  assert.equal(deck.cards.length, 100);
 });
