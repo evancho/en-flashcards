@@ -12,8 +12,7 @@ const EXAMPLES = [
   ["quiet", "安靜的"],
 ];
 
-const STARTER_DECK = "decks/tech-english-100.json";
-const STARTER_LABEL = "載入科技英文 100 詞";
+const DECK_CATALOG = "decks/index.json";
 
 const store = createStore(localStorage);
 const state = {
@@ -173,7 +172,7 @@ function renderReview() {
       $("#empty-title").textContent = "資料讀不出來";
       $("#empty-body").textContent = "先到備份下載原始資料，或清除後重來。";
       $("#empty-examples").hidden = true;
-      $("#empty-load-deck").hidden = true;
+      $("#empty-open-decks").hidden = true;
       $("#empty-recheck").hidden = true;
       $("#empty-add").hidden = true;
       return;
@@ -183,14 +182,14 @@ function renderReview() {
       $("#empty-title").textContent = "還沒有單字";
       $("#empty-body").textContent = "加上英文和背面，就可以開始複習。";
       $("#empty-examples").hidden = false;
-      $("#empty-load-deck").hidden = false;
+      $("#empty-open-decks").hidden = false;
       $("#empty-recheck").hidden = true;
       $("#empty-add").hidden = false;
     } else {
       $("#empty-title").textContent = "這輪沒有待複習的單字";
       $("#empty-body").textContent = next ? `下一張在 ${formatDelay(next - Date.now())}後` : "稍後再來看看。";
       $("#empty-examples").hidden = true;
-      $("#empty-load-deck").hidden = true;
+      $("#empty-open-decks").hidden = true;
       $("#empty-recheck").hidden = false;
       $("#empty-add").hidden = false;
     }
@@ -306,6 +305,7 @@ function openView(name) {
   state.view = name;
   if (name === "review") refreshQueue();
   render();
+  if (name === "backup") loadCatalog();
   if (name === "add") $("#front").focus();
 }
 
@@ -465,24 +465,93 @@ async function removeCard(id) {
   render();
 }
 
-async function loadStarterDeck() {
+function deckPath(path) {
+  const value = String(path || "").trim();
+  if (!/^decks\/[\w.-]+\.json$/i.test(value)) return "";
+  return value;
+}
+
+function reportDeckMerge(result) {
+  if (result.added > 0 && result.filled > 0) toast(`已加入 ${result.added} 張，並補上 ${result.filled} 張例句`);
+  else if (result.added > 0 && result.skipped > 0) toast(`已加入 ${result.added} 張，略過 ${result.skipped} 張已有的`);
+  else if (result.added > 0) toast(`已加入 ${result.added} 張`);
+  else if (result.filled > 0) toast(`已補上 ${result.filled} 張例句`);
+  else toast("已加入 0 張，這些詞都已經在詞庫裡");
+}
+
+let catalogToken = 0;
+
+async function loadCatalog() {
+  if (state.loadingDeck) return;
+  const token = ++catalogToken;
+  const list = $("#deck-list");
+  const note = $("#deck-catalog-note");
+  try {
+    const response = await fetch(DECK_CATALOG);
+    if (!response.ok) throw new Error("offline");
+    const data = await response.json();
+    if (token !== catalogToken) return;
+    const decks = Array.isArray(data?.decks) ? data.decks : [];
+    list.replaceChildren();
+    let shown = 0;
+    for (const deck of decks) {
+      const row = deckRow(deck);
+      if (!row) continue;
+      list.append(row);
+      shown += 1;
+    }
+    note.hidden = shown > 0;
+    note.textContent = shown > 0 ? "" : "目前沒有可載入的詞庫。";
+  } catch {
+    if (token !== catalogToken) return;
+    list.replaceChildren();
+    note.hidden = false;
+    note.textContent = "請連上網路打開一次，才能看到詞庫。";
+    toast("請連上網路打開一次，才能看到詞庫。");
+  }
+}
+
+function deckRow(deck) {
+  const path = deckPath(deck?.path);
+  const title = String(deck?.title || "").trim();
+  if (!path || !title) return null;
+  const row = document.createElement("article");
+  row.className = "deck-row";
+  const heading = document.createElement("h3");
+  heading.textContent = title;
+  const description = document.createElement("p");
+  description.className = "hint";
+  description.textContent = String(deck.description || "").trim();
+  if (!description.textContent) description.hidden = true;
+  const count = Number(deck.count);
+  const meta = document.createElement("p");
+  meta.className = "hint";
+  meta.textContent = Number.isFinite(count) && count >= 0 ? `${count} 張` : "";
+  if (!meta.textContent) meta.hidden = true;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "btn";
+  button.textContent = "載入／更新";
+  button.addEventListener("click", () => loadDeck(path, button));
+  row.append(heading, description, meta, button);
+  return row;
+}
+
+async function loadDeck(path, button) {
   if (state.loadingDeck) return;
   state.loadingDeck = true;
-  const buttons = [...document.querySelectorAll("#load-deck, #empty-load-deck")];
-  for (const button of buttons) {
-    button.disabled = true;
-    button.textContent = "載入中…";
-  }
+  button.disabled = true;
+  button.textContent = "載入中…";
   try {
     let response;
     try {
-      response = await fetch(STARTER_DECK);
+      response = await fetch(path);
     } catch {
-      toast("請連上網路打開一次，才能載入這 100 詞。");
+      toast("請連上網路打開一次，才能載入詞庫。");
       return;
     }
     if (!response.ok) {
-      toast("請連上網路打開一次，才能載入這 100 詞。");
+      toast("請連上網路打開一次，才能載入詞庫。");
       return;
     }
     let list;
@@ -497,21 +566,15 @@ async function loadStarterDeck() {
     state.current = null;
     state.revealed = false;
     if ((result.added > 0 || result.filled > 0) && state.view === "review") refreshQueue();
-    if (result.added > 0 && result.filled > 0) toast(`已加入 ${result.added} 張，並補上 ${result.filled} 張例句`);
-    else if (result.added > 0 && result.skipped > 0) toast(`已加入 ${result.added} 張，略過 ${result.skipped} 張已有的`);
-    else if (result.added > 0) toast(`已加入 ${result.added} 張`);
-    else if (result.filled > 0) toast(`已補上 ${result.filled} 張例句`);
-    else toast("已加入 0 張，這些詞都已經在詞庫裡");
+    reportDeckMerge(result);
     render();
   } catch (error) {
     toast(explainError(error));
     render();
   } finally {
     state.loadingDeck = false;
-    for (const button of buttons) {
-      button.disabled = false;
-      button.textContent = STARTER_LABEL;
-    }
+    button.disabled = false;
+    button.textContent = "載入／更新";
   }
 }
 
@@ -746,8 +809,10 @@ function bind() {
     openView("add");
   });
   $("#empty-examples").addEventListener("click", addExamples);
-  $("#empty-load-deck").addEventListener("click", loadStarterDeck);
-  $("#load-deck").addEventListener("click", loadStarterDeck);
+  $("#empty-open-decks").addEventListener("click", () => {
+    openView("backup");
+    $("#deck-catalog").scrollIntoView({ block: "start" });
+  });
   $("#empty-recheck").addEventListener("click", () => {
     state.queue = [];
     state.current = null;

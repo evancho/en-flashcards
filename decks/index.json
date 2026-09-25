@@ -1,0 +1,11 @@
+{
+  "decks": [
+    {
+      "id": "tech-english-100",
+      "title": "科技英文 100 詞",
+      "description": "API、雲端、資安、開發流程常用詞",
+      "path": "decks/tech-english-100.json",
+      "count": 100
+    }
+  ]
+}

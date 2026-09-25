@@ -27,16 +27,25 @@ test("page points at the manifest, stylesheet, script, and icons", () => {
     "有點生",
     "會了",
     "很熟",
-    "載入科技英文 100 詞",
+    "從詞庫選一套",
   ]) {
     assert.ok(html.includes(needle), needle);
   }
+  assert.equal(html.includes("載入科技英文 100 詞"), false);
+  assert.equal(html.includes('id="load-deck"'), false);
+  assert.equal(html.includes('id="empty-load-deck"'), false);
   const app = readFileSync(new URL("../js/app.js", import.meta.url), "utf8");
-  assert.match(app, /const STARTER_DECK = "decks\/tech-english-100\.json"/);
-  const loader = app.slice(app.indexOf("async function loadStarterDeck"), app.indexOf("function addExamples"));
-  assert.match(loader, /fetch\(STARTER_DECK\)/);
+  assert.match(app, /const DECK_CATALOG = "decks\/index\.json"/);
+  assert.match(app, /載入／更新/);
+  const loader = app.slice(app.indexOf("async function loadDeck"), app.indexOf("function addExamples"));
+  assert.match(loader, /fetch\(path\)/);
   assert.match(loader, /mergeSkipExisting/);
   assert.doesNotMatch(loader, /replaceAll/);
+  const catalog = JSON.parse(readFileSync(new URL("../decks/index.json", import.meta.url), "utf8"));
+  assert.equal(catalog.decks.length, 1);
+  assert.equal(catalog.decks[0].id, "tech-english-100");
+  assert.equal(catalog.decks[0].path, "decks/tech-english-100.json");
+  assert.equal(catalog.decks[0].title, "科技英文 100 詞");
   const deck = JSON.parse(readFileSync(new URL("../decks/tech-english-100.json", import.meta.url), "utf8"));
   assert.equal(deck.cards.length, 100);
   for (const card of deck.cards) {
@@ -48,9 +57,10 @@ test("page points at the manifest, stylesheet, script, and icons", () => {
   }
   assert.match(html, /發音/);
   assert.match(html, /朗讀例句/);
-  assert.match(html, /版本 v3 · 例句中英＋標出單字/);
+  assert.equal(catalog.decks[0].count, deck.cards.length);
+  assert.match(html, /版本 v4 · 詞庫列表/);
   const worker = readFileSync(new URL("../sw.js", import.meta.url), "utf8");
-  assert.match(worker, /const CACHE = "en-flashcards-v3"/);
+  assert.match(worker, /const CACHE = "en-flashcards-v4"/);
   assert.match(worker, /keys\.filter\(\(key\) => key !== CACHE\)/);
   assert.match(worker, /js\/speech\.js/);
   assert.match(worker, /js\/highlight\.js/);
