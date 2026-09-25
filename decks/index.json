@@ -5,28 +5,32 @@
       "title": "科技英文 100 詞",
       "description": "API、雲端、資安、開發流程常用詞",
       "path": "decks/tech-english-100.json",
-      "count": 100
+      "count": 100,
+      "category": "科技"
     },
     {
       "id": "daily-english-100",
       "title": "生活用語 100",
       "description": "通勤、購物、飲食、情緒等日常口語",
       "path": "decks/daily-english-100.json",
-      "count": 100
+      "count": 100,
+      "category": "生活"
     },
     {
       "id": "travel-english-100",
       "title": "旅行用語 100",
       "description": "機場、飯店、交通、問路與訂位，在日本也好用",
       "path": "decks/travel-english-100.json",
-      "count": 100
+      "count": 100,
+      "category": "旅行"
     },
     {
       "id": "business-english-100",
       "title": "商業用語 100",
       "description": "會議、郵件、談判、專案與基本財務",
       "path": "decks/business-english-100.json",
-      "count": 100
+      "count": 100,
+      "category": "商業"
     }
   ]
 }

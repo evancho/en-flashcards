@@ -42,6 +42,10 @@ test("page points at the manifest, stylesheet, script, and icons", () => {
   assert.match(decks, /載入所選/);
   assert.match(decks, /全選/);
   assert.match(decks, /清除選取/);
+  assert.match(decks, /id="deck-search"/);
+  assert.match(decks, /id="deck-categories"/);
+  assert.match(app, /沒有符合的詞庫/);
+  assert.match(app, /function visibleDeckBoxes/);
   assert.equal(backup.includes("deck-list"), false);
   assert.equal(backup.includes("載入所選"), false);
   assert.equal(html.includes("載入／更新"), false);
@@ -56,17 +60,18 @@ test("page points at the manifest, stylesheet, script, and icons", () => {
   assert.doesNotMatch(loader, /replaceAll/);
   const catalog = JSON.parse(readFileSync(new URL("../decks/index.json", import.meta.url), "utf8"));
   const expectedDecks = [
-    ["tech-english-100", "科技英文 100 詞", "decks/tech-english-100.json"],
-    ["daily-english-100", "生活用語 100", "decks/daily-english-100.json"],
-    ["travel-english-100", "旅行用語 100", "decks/travel-english-100.json"],
-    ["business-english-100", "商業用語 100", "decks/business-english-100.json"],
+    ["tech-english-100", "科技英文 100 詞", "decks/tech-english-100.json", "科技"],
+    ["daily-english-100", "生活用語 100", "decks/daily-english-100.json", "生活"],
+    ["travel-english-100", "旅行用語 100", "decks/travel-english-100.json", "旅行"],
+    ["business-english-100", "商業用語 100", "decks/business-english-100.json", "商業"],
   ];
   assert.equal(catalog.decks.length, expectedDecks.length);
   catalog.decks.forEach((entry, index) => {
-    const [id, title, path] = expectedDecks[index];
+    const [id, title, path, category] = expectedDecks[index];
     assert.equal(entry.id, id);
     assert.equal(entry.title, title);
     assert.equal(entry.path, path);
+    assert.equal(entry.category, category);
     assert.equal(entry.count, 100);
     assert.equal(typeof entry.description, "string");
     assert.ok(entry.description.length >= 8, entry.id);
@@ -86,9 +91,9 @@ test("page points at the manifest, stylesheet, script, and icons", () => {
   });
   assert.match(html, /發音/);
   assert.match(html, /朗讀例句/);
-  assert.match(html, /版本 v6 · 詞庫獨立頁/);
+  assert.match(html, /版本 v7 · 詞庫可篩選/);
   const worker = readFileSync(new URL("../sw.js", import.meta.url), "utf8");
-  assert.match(worker, /const CACHE = "en-flashcards-v6"/);
+  assert.match(worker, /const CACHE = "en-flashcards-v7"/);
   assert.match(worker, /keys\.filter\(\(key\) => key !== CACHE\)/);
   assert.match(worker, /js\/speech\.js/);
   assert.match(worker, /js\/highlight\.js/);

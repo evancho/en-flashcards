@@ -24,6 +24,7 @@ const state = {
   toastTimer: 0,
   saving: false,
   loadingDeck: false,
+  deckCategory: "",
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -483,6 +484,10 @@ function selectedDeckBoxes() {
   return [...document.querySelectorAll("#deck-list .deck-check")];
 }
 
+function visibleDeckBoxes() {
+  return selectedDeckBoxes().filter((box) => !box.closest(".deck-row")?.hidden);
+}
+
 function syncDeckSelection() {
   const boxes = selectedDeckBoxes();
   const selected = boxes.filter((box) => box.checked).length;
@@ -491,9 +496,58 @@ function syncDeckSelection() {
   button.disabled = busy || selected === 0;
   button.textContent = busy ? "載入中…" : "載入所選";
   $("#deck-selected").textContent = `已選 ${selected} 套`;
-  $("#deck-select-all").disabled = busy || boxes.length === 0;
+  $("#deck-select-all").disabled = busy || visibleDeckBoxes().length === 0;
   $("#deck-clear").disabled = busy || selected === 0;
   for (const box of boxes) box.disabled = busy;
+}
+
+function deckCategoryName(deck) {
+  return String(deck?.category || "").trim();
+}
+
+function renderCategoryChips(decks) {
+  const bar = $("#deck-categories");
+  const names = [];
+  for (const deck of decks) {
+    const name = deckCategoryName(deck);
+    if (name && !names.includes(name)) names.push(name);
+  }
+  if (state.deckCategory && !names.includes(state.deckCategory)) state.deckCategory = "";
+  bar.replaceChildren();
+  for (const name of ["", ...names]) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "chip";
+    button.role = "tab";
+    button.dataset.category = name;
+    button.textContent = name || "全部";
+    button.setAttribute("aria-pressed", name === state.deckCategory ? "true" : "false");
+    bar.append(button);
+  }
+  bar.hidden = names.length === 0;
+}
+
+function rowMatchesFilter(row) {
+  if (state.deckCategory && row.dataset.category !== state.deckCategory) return false;
+  const query = $("#deck-search").value.trim().toLowerCase();
+  if (!query) return true;
+  const haystack = `${row.dataset.title || ""} ${row.dataset.description || ""}`.toLowerCase();
+  return haystack.includes(query);
+}
+
+function applyDeckFilter() {
+  const rows = [...document.querySelectorAll("#deck-list .deck-row")];
+  if (!rows.length) return;
+  let shown = 0;
+  for (const row of rows) {
+    const match = rowMatchesFilter(row);
+    row.hidden = !match;
+    if (match) shown += 1;
+  }
+  const note = $("#deck-catalog-note");
+  note.hidden = shown > 0;
+  note.textContent = shown > 0 ? "" : "沒有符合的詞庫";
+  syncDeckSelection();
 }
 
 let catalogToken = 0;
@@ -519,10 +573,13 @@ async function loadCatalog() {
     }
     note.hidden = shown > 0;
     note.textContent = shown > 0 ? "" : "目前沒有可載入的詞庫。";
-    syncDeckSelection();
+    renderCategoryChips(decks);
+    applyDeckFilter();
   } catch {
     if (token !== catalogToken) return;
     list.replaceChildren();
+    $("#deck-categories").replaceChildren();
+    $("#deck-categories").hidden = true;
     note.hidden = false;
     note.textContent = "請連上網路打開一次，才能看到詞庫。";
     syncDeckSelection();
@@ -536,6 +593,9 @@ function deckRow(deck) {
   if (!path || !title) return null;
   const row = document.createElement("label");
   row.className = "deck-row";
+  row.dataset.category = deckCategoryName(deck);
+  row.dataset.title = title;
+  row.dataset.description = String(deck.description || "").trim();
   const box = document.createElement("input");
   box.type = "checkbox";
   box.className = "deck-check";
@@ -851,9 +911,19 @@ function bind() {
     if (event.target.classList?.contains("deck-check")) syncDeckSelection();
   });
   $("#deck-select-all").addEventListener("click", () => {
-    for (const box of selectedDeckBoxes()) box.checked = true;
+    for (const box of visibleDeckBoxes()) box.checked = true;
     syncDeckSelection();
   });
+  $("#deck-categories").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-category]");
+    if (!button) return;
+    state.deckCategory = button.dataset.category || "";
+    for (const chip of document.querySelectorAll("#deck-categories .chip")) {
+      chip.setAttribute("aria-pressed", chip === button ? "true" : "false");
+    }
+    applyDeckFilter();
+  });
+  $("#deck-search").addEventListener("input", () => applyDeckFilter());
   $("#deck-clear").addEventListener("click", () => {
     for (const box of selectedDeckBoxes()) box.checked = false;
     syncDeckSelection();

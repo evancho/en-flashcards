@@ -407,6 +407,31 @@ legend { padding: 0 6px; font-weight: 760; }
 
 .card-list, .deck-list { display: flex; flex-direction: column; gap: 10px; padding-bottom: 8px; }
 
+.chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  flex: none;
+  padding-bottom: 2px;
+}
+
+.chip {
+  flex: none;
+  min-height: 40px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  font-size: 0.95rem;
+  font-weight: 760;
+}
+
+.chip[aria-pressed="true"] {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
 .deck-tools { display: flex; gap: 8px; flex: none; }
 
 .deck-tools .btn {
