@@ -2,6 +2,7 @@ import { createStore, parseImport } from "./store.js";
 import { formatDelay, previewPlan, stageLabel, formatDue } from "./srs.js";
 import { prepareVoices, speakEnglish, speechAvailable } from "./speech.js";
 import { findTermRanges } from "./highlight.js";
+import { readSettings, shuffleInPlace, writeSettings } from "./review.js";
 
 const TIP_KEY = "en-flashcards.ios-tip";
 const EXAMPLES = [
@@ -15,6 +16,7 @@ const EXAMPLES = [
 const DECK_CATALOG = "decks/index.json";
 
 const store = createStore(localStorage);
+const settings = readSettings(localStorage);
 const state = {
   view: "review",
   queue: [],
@@ -114,11 +116,37 @@ function refreshQueue() {
   const extras = cards
     .filter((card) => card.due <= now && !seen.has(card.id))
     .sort((a, b) => a.due - b.due || a.createdAt - b.createdAt);
+  if (settings.random) shuffleInPlace(extras);
   state.queue.push(...extras);
   if (!state.current) {
     state.current = state.queue.shift() || null;
     state.revealed = false;
   }
+}
+
+function persistSettings() {
+  try {
+    writeSettings(localStorage, settings);
+  } catch {
+    toast("無法記住這個設定");
+  }
+}
+
+function renderReviewSettings() {
+  $("#dir-en").setAttribute("aria-pressed", settings.reverse ? "false" : "true");
+  $("#dir-zh").setAttribute("aria-pressed", settings.reverse ? "true" : "false");
+  $("#random-order").setAttribute("aria-pressed", settings.random ? "true" : "false");
+}
+
+function paintCard() {
+  const card = state.current;
+  if (!card) return;
+  const prompt = $("#card-front");
+  const answer = $("#card-back");
+  prompt.textContent = settings.reverse ? card.back : card.front;
+  answer.textContent = settings.reverse ? card.front : card.back;
+  prompt.lang = settings.reverse ? "zh-Hant" : "en";
+  answer.lang = settings.reverse ? "en" : "zh-Hant";
 }
 
 function setRevealed(on) {
@@ -130,7 +158,7 @@ function setRevealed(on) {
   $("#card-back").hidden = !on;
   $("#card-prompt").hidden = on;
   $("#ratings").hidden = !on;
-  $("#card-kicker").textContent = on ? "答案" : "英文";
+  $("#card-kicker").textContent = on ? "答案" : settings.reverse ? "中文" : "英文";
   const example = state.current?.example || "";
   const exampleZh = state.current?.exampleZh || "";
   $("#example-block").hidden = !on || !example;
@@ -138,7 +166,7 @@ function setRevealed(on) {
   $("#card-example-zh").textContent = exampleZh;
   $("#card-example-zh").hidden = !exampleZh;
   const canSpeak = speechAvailable();
-  $("#speak-front").hidden = !canSpeak;
+  $("#speak-front").hidden = !canSpeak || (settings.reverse && !on);
   $("#speak-example").hidden = !canSpeak;
   $("#speech-note").hidden = canSpeak;
 }
@@ -162,6 +190,7 @@ function renderChrome() {
 }
 
 function renderReview() {
+  renderReviewSettings();
   const stats = store.stats();
   const wrap = $("#review-card-wrap");
   const empty = $("#review-empty");
@@ -201,8 +230,7 @@ function renderReview() {
   empty.hidden = true;
   const left = state.queue.length + 1;
   $("#review-count").textContent = `這輪剩下 ${left} 張`;
-  $("#card-front").textContent = state.current.front;
-  $("#card-back").textContent = state.current.back;
+  paintCard();
   setRevealed(state.revealed);
   const plan = previewPlan(state.current, Date.now());
   for (const [rating, item] of Object.entries(plan)) {
@@ -906,6 +934,27 @@ function bind() {
   $("#empty-examples").addEventListener("click", addExamples);
   $("#empty-open-decks").addEventListener("click", () => {
     openView("decks");
+  });
+  $("#dir-en").addEventListener("click", () => {
+    if (settings.reverse) {
+      settings.reverse = false;
+      persistSettings();
+      render();
+    }
+  });
+  $("#dir-zh").addEventListener("click", () => {
+    if (!settings.reverse) {
+      settings.reverse = true;
+      persistSettings();
+      render();
+    }
+  });
+  $("#random-order").addEventListener("click", () => {
+    settings.random = !settings.random;
+    if (settings.random) shuffleInPlace(state.queue);
+    else state.queue.sort((a, b) => a.due - b.due || a.createdAt - b.createdAt);
+    persistSettings();
+    render();
   });
   $("#deck-list").addEventListener("change", (event) => {
     if (event.target.classList?.contains("deck-check")) syncDeckSelection();

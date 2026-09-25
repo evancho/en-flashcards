@@ -49,6 +49,13 @@
 
       <main id="main">
         <section id="view-review" class="view">
+          <div class="review-settings">
+            <div class="segment" role="group" aria-label="出題方向">
+              <button type="button" id="dir-en" aria-pressed="true">先英文</button>
+              <button type="button" id="dir-zh" aria-pressed="false">先中文</button>
+            </div>
+            <button type="button" id="random-order" class="chip" aria-pressed="false">隨機順序</button>
+          </div>
           <p id="review-count" class="session-count" aria-live="polite"></p>
           <div id="review-card-wrap" class="card-wrap">
             <div id="flashcard" class="flashcard">
@@ -173,7 +180,7 @@
 
         <section id="view-backup" class="view scroll" hidden>
           <h2>備份</h2>
-          <p class="hint" id="app-version">版本 v7 · 詞庫可篩選</p>
+          <p class="hint" id="app-version">版本 v8 · 隨機與先中文</p>
           <p class="lede">單字存在這個畫面所在的瀏覽器或主畫面圖示裡，不會上傳。</p>
           <p class="stat-line">這台裝置 <strong id="stat-total">0</strong> 張，待複習 <strong id="stat-due">0</strong> 張。</p>
           <p id="offline-flag" class="hint" hidden>網頁已存進這台裝置，斷線後從圖示打開仍可使用。</p>
