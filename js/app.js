@@ -169,9 +169,13 @@ function setRevealed(on) {
   $("#card-breakdown-text").textContent = breakdown;
   $("#card-breakdown").hidden = !on || !breakdown;
   const canSpeak = speechAvailable();
-  $("#speak-front").hidden = !canSpeak || (settings.reverse && !on);
-  $("#speak-example").hidden = !canSpeak || !example;
-  $("#speak-example-zh").hidden = !canSpeak || !exampleZh;
+  const showFront = canSpeak && !(settings.reverse && !on);
+  const showExample = on && canSpeak && Boolean(example);
+  const showExampleZh = on && canSpeak && Boolean(exampleZh);
+  $("#speak-front").hidden = !showFront;
+  $("#speak-example").hidden = !showExample;
+  $("#speak-example-zh").hidden = !showExampleZh;
+  $("#review-speak").hidden = !showFront && !showExample && !showExampleZh;
   $("#speech-note").hidden = canSpeak;
 }
 
