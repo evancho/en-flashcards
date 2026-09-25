@@ -42,22 +42,37 @@ test("page points at the manifest, stylesheet, script, and icons", () => {
   assert.match(loader, /mergeSkipExisting/);
   assert.doesNotMatch(loader, /replaceAll/);
   const catalog = JSON.parse(readFileSync(new URL("../decks/index.json", import.meta.url), "utf8"));
-  assert.equal(catalog.decks.length, 1);
-  assert.equal(catalog.decks[0].id, "tech-english-100");
-  assert.equal(catalog.decks[0].path, "decks/tech-english-100.json");
-  assert.equal(catalog.decks[0].title, "科技英文 100 詞");
-  const deck = JSON.parse(readFileSync(new URL("../decks/tech-english-100.json", import.meta.url), "utf8"));
-  assert.equal(deck.cards.length, 100);
-  for (const card of deck.cards) {
-    assert.equal(typeof card.example, "string", card.front);
-    assert.ok(card.example.length >= 12, card.front);
-    assert.equal(typeof card.exampleZh, "string", card.front);
-    assert.ok(card.exampleZh.length >= 4, card.front);
-    assert.equal(findTermRanges(card.example, card.front).length >= 1, true, card.front);
-  }
+  const expectedDecks = [
+    ["tech-english-100", "科技英文 100 詞", "decks/tech-english-100.json"],
+    ["daily-english-100", "生活用語 100", "decks/daily-english-100.json"],
+    ["travel-english-100", "旅行用語 100", "decks/travel-english-100.json"],
+    ["business-english-100", "商業用語 100", "decks/business-english-100.json"],
+  ];
+  assert.equal(catalog.decks.length, expectedDecks.length);
+  catalog.decks.forEach((entry, index) => {
+    const [id, title, path] = expectedDecks[index];
+    assert.equal(entry.id, id);
+    assert.equal(entry.title, title);
+    assert.equal(entry.path, path);
+    assert.equal(entry.count, 100);
+    assert.equal(typeof entry.description, "string");
+    assert.ok(entry.description.length >= 8, entry.id);
+    const deck = JSON.parse(readFileSync(new URL(`../${path}`, import.meta.url), "utf8"));
+    assert.equal(deck.cards.length, 100, entry.id);
+    const fronts = new Set();
+    for (const card of deck.cards) {
+      const key = card.front.toLowerCase();
+      assert.equal(fronts.has(key), false, card.front);
+      fronts.add(key);
+      assert.equal(typeof card.example, "string", card.front);
+      assert.ok(card.example.length >= 12, card.front);
+      assert.equal(typeof card.exampleZh, "string", card.front);
+      assert.ok(card.exampleZh.length >= 4, card.front);
+      assert.equal(findTermRanges(card.example, card.front).length >= 1, true, `${card.front}: ${card.example}`);
+    }
+  });
   assert.match(html, /發音/);
   assert.match(html, /朗讀例句/);
-  assert.equal(catalog.decks[0].count, deck.cards.length);
   assert.match(html, /版本 v4 · 詞庫列表/);
   const worker = readFileSync(new URL("../sw.js", import.meta.url), "utf8");
   assert.match(worker, /const CACHE = "en-flashcards-v4"/);
