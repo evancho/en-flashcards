@@ -70,9 +70,12 @@
                 <span class="kicker">例句</span>
                 <p id="card-example" class="example-line" lang="en"></p>
                 <p id="card-example-zh" class="example-zh" lang="zh-Hant" hidden></p>
-                <button type="button" class="speak" id="speak-example">朗讀例句</button>
+                <div class="speak-row">
+                  <button type="button" class="speak" id="speak-example">朗讀例句</button>
+                  <button type="button" class="speak" id="speak-example-zh" hidden>朗讀中文</button>
+                </div>
               </div>
-              <p id="speech-note" class="hint" hidden>這台裝置無法朗讀英文。</p>
+              <p id="speech-note" class="hint" hidden>這台裝置無法朗讀。</p>
             </div>
             <div id="ratings" class="ratings" hidden>
               <button type="button" class="rate rate-again" data-rating="again">
@@ -135,6 +138,7 @@
             <div class="row">
               <button type="button" class="btn secondary" id="speak-form-front">發音</button>
               <button type="button" class="btn secondary" id="speak-form-example">朗讀例句</button>
+              <button type="button" class="btn secondary" id="speak-form-example-zh" hidden>朗讀中文</button>
             </div>
             <p id="edit-note" class="hint" hidden>修改文字不會重設複習進度。</p>
             <button type="submit" class="btn" id="save-btn">儲存</button>
@@ -180,7 +184,7 @@
 
         <section id="view-backup" class="view scroll" hidden>
           <h2>備份</h2>
-          <p class="hint" id="app-version">版本 v8 · 隨機與先中文</p>
+          <p class="hint" id="app-version">版本 v9 · 例句中文朗讀</p>
           <p class="lede">單字存在這個畫面所在的瀏覽器或主畫面圖示裡，不會上傳。</p>
           <p class="stat-line">這台裝置 <strong id="stat-total">0</strong> 張，待複習 <strong id="stat-due">0</strong> 張。</p>
           <p id="offline-flag" class="hint" hidden>網頁已存進這台裝置，斷線後從圖示打開仍可使用。</p>

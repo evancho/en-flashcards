@@ -11,25 +11,41 @@ export function pickEnglishVoice(voices) {
   return preferred(enUS) || preferred(en) || null;
 }
 
-let chosenVoice = null;
+export function pickChineseVoice(voices) {
+  const list = Array.isArray(voices) ? voices : [];
+  const match = (pattern) => list.filter((voice) => pattern.test(voice?.lang || ""));
+  const preferred = (group) =>
+    group.find((voice) => /mei[- ]?jia|ting[- ]?ting|sin[- ]?ji|siri|google|natural|premium|enhanced/i.test(voice?.name || "")) ||
+    group[0];
+  return (
+    preferred(match(/^zh[-_](TW|Hant([-_]TW)?)$/i)) ||
+    preferred(match(/^zh[-_]HK$/i)) ||
+    preferred(match(/^zh([-_]|$)/i)) ||
+    null
+  );
+}
+
+let chosenEnglish = null;
+let chosenChinese = null;
 
 export function prepareVoices() {
   if (!speechAvailable()) return;
   const refresh = () => {
-    chosenVoice = pickEnglishVoice(window.speechSynthesis.getVoices());
+    const voices = window.speechSynthesis.getVoices();
+    chosenEnglish = pickEnglishVoice(voices);
+    chosenChinese = pickChineseVoice(voices);
   };
   refresh();
   window.speechSynthesis.addEventListener?.("voiceschanged", refresh);
 }
 
-export function speakEnglish(text) {
+function speak(text, voice, fallbackLang) {
   if (!speechAvailable()) return false;
   const line = String(text ?? "").trim();
   if (!line) return false;
   const synth = window.speechSynthesis;
   const utterance = new window.SpeechSynthesisUtterance(line);
-  const voice = chosenVoice || pickEnglishVoice(synth.getVoices());
-  utterance.lang = voice?.lang || "en-US";
+  utterance.lang = voice?.lang || fallbackLang;
   utterance.rate = 0.95;
   if (voice) utterance.voice = voice;
   try {
@@ -40,4 +56,16 @@ export function speakEnglish(text) {
     return false;
   }
   return true;
+}
+
+export function speakEnglish(text) {
+  const voices = speechAvailable() ? window.speechSynthesis.getVoices() : [];
+  const voice = chosenEnglish || pickEnglishVoice(voices);
+  return speak(text, voice, "en-US");
+}
+
+export function speakChinese(text) {
+  const voices = speechAvailable() ? window.speechSynthesis.getVoices() : [];
+  const voice = chosenChinese || pickChineseVoice(voices);
+  return speak(text, voice, "zh-TW");
 }
