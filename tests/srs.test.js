@@ -51,7 +51,8 @@ test("delay and stage labels", () => {
   assert.equal(formatDelay(60_000), "1 分鐘");
   assert.equal(formatDelay(10 * 60_000), "10 分鐘");
   assert.equal(formatDelay(4 * 24 * 60 * 60 * 1000), "4 天");
-  assert.equal(stageLabel(fresh()), "新卡片");
-  assert.equal(stageLabel(fresh({ step: 1 })), "學習中");
-  assert.equal(stageLabel(fresh({ interval: 3 })), "間隔 3 天");
+  assert.equal(stageLabel(fresh(), now), "新卡片");
+  assert.equal(stageLabel(fresh({ step: 1 }), now), "學習中");
+  assert.equal(stageLabel(fresh({ due: now + 60_000 }), now), "學習中");
+  assert.equal(stageLabel(fresh({ interval: 3 }), now), "間隔 3 天");
 });

@@ -84,9 +84,11 @@ export function formatDue(due, now) {
   return `${formatDelay(due - now)}後`;
 }
 
-export function stageLabel(card) {
+export function stageLabel(card, now = Date.now()) {
   if ((card.interval ?? 0) > 0) return `間隔 ${card.interval} 天`;
-  if ((card.lapses ?? 0) > 0 || (card.reps ?? 0) > 0 || (card.step ?? 0) > 0) return "學習中";
+  if ((card.lapses ?? 0) > 0 || (card.reps ?? 0) > 0 || (card.step ?? 0) > 0 || (card.due ?? 0) > now) {
+    return "學習中";
+  }
   return "新卡片";
 }
 

@@ -371,7 +371,7 @@ async function removeCard(id) {
 function addExamples() {
   const now = Date.now();
   try {
-    EXAMPLES.forEach(([front, back], index) => store.add(front, back, now + index));
+    EXAMPLES.forEach(([front, back]) => store.add(front, back, now));
   } catch (error) {
     toast(explainError(error));
     return;

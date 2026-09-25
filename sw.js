@@ -51,7 +51,6 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
-  if (request.cache === "reload" || request.cache === "no-store" || request.cache === "no-cache") return;
 
   event.respondWith(
     (async () => {
