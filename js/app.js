@@ -1,6 +1,7 @@
 import { createStore, parseImport } from "./store.js";
 import { formatDelay, previewPlan, stageLabel, formatDue } from "./srs.js";
 import { prepareVoices, speakEnglish, speechAvailable } from "./speech.js";
+import { findTermRanges } from "./highlight.js";
 
 const TIP_KEY = "en-flashcards.ios-tip";
 const EXAMPLES = [
@@ -133,7 +134,7 @@ function setRevealed(on) {
   const example = state.current?.example || "";
   const exampleZh = state.current?.exampleZh || "";
   $("#example-block").hidden = !on || !example;
-  $("#card-example").textContent = example;
+  fillHighlighted($("#card-example"), example, state.current?.front || "");
   $("#card-example-zh").textContent = exampleZh;
   $("#card-example-zh").hidden = !exampleZh;
   const canSpeak = speechAvailable();
@@ -272,7 +273,7 @@ function renderList() {
       const example = document.createElement("p");
       example.className = "example-line";
       example.lang = "en";
-      example.textContent = card.example;
+      fillHighlighted(example, card.example, card.front);
       row.append(example);
       if (card.exampleZh) {
         const gloss = document.createElement("p");
@@ -322,6 +323,26 @@ function fillForm(card) {
   $("#back").value = card.back;
   $("#example").value = card.example || "";
   $("#example-zh").value = card.exampleZh || "";
+}
+
+function fillHighlighted(el, sentence, term) {
+  const text = String(sentence ?? "");
+  const ranges = findTermRanges(text, term);
+  el.replaceChildren();
+  if (!ranges.length) {
+    el.append(document.createTextNode(text));
+    return;
+  }
+  let cursor = 0;
+  for (const range of ranges) {
+    if (range.start > cursor) el.append(document.createTextNode(text.slice(cursor, range.start)));
+    const mark = document.createElement("mark");
+    mark.className = "term";
+    mark.textContent = text.slice(range.start, range.end);
+    el.append(mark);
+    cursor = range.end;
+  }
+  if (cursor < text.length) el.append(document.createTextNode(text.slice(cursor)));
 }
 
 function speakButton(text, label) {

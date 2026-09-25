@@ -1,10 +1,11 @@
-const CACHE = "en-flashcards-v2";
+const CACHE = "en-flashcards-v3";
 
 const ASSETS = [
   "./index.html",
   "./css/styles.css",
   "./js/app.js",
   "./js/speech.js",
+  "./js/highlight.js",
   "./js/srs.js",
   "./js/store.js",
   "./manifest.webmanifest",

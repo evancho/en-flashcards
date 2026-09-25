@@ -219,6 +219,21 @@ h2 { margin: 0; font-size: 1.25rem; }
   overflow-wrap: anywhere;
 }
 
+mark.term {
+  background: #f4d48a;
+  color: #1f1a17;
+  font-weight: 760;
+  padding: 0 0.08em;
+  border-radius: 0.18em;
+}
+
+@media (prefers-color-scheme: dark) {
+  mark.term {
+    background: #8a6a22;
+    color: #fff8e8;
+  }
+}
+
 .example-zh {
   margin: 0;
   color: var(--muted);

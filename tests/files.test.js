@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { findTermRanges } from "../js/highlight.js";
 
 test("service worker precache lists real files", () => {
   const source = readFileSync(new URL("../sw.js", import.meta.url), "utf8");
@@ -41,16 +42,17 @@ test("page points at the manifest, stylesheet, script, and icons", () => {
   for (const card of deck.cards) {
     assert.equal(typeof card.example, "string", card.front);
     assert.ok(card.example.length >= 12, card.front);
-    const example = card.example.toLowerCase();
-    const parts = card.front.toLowerCase().split(/\s*\/\s*/);
-    assert.ok(parts.some((part) => example.includes(part)), `${card.front}: ${card.example}`);
+    assert.equal(typeof card.exampleZh, "string", card.front);
+    assert.ok(card.exampleZh.length >= 4, card.front);
+    assert.equal(findTermRanges(card.example, card.front).length >= 1, true, card.front);
   }
   assert.match(html, /發音/);
   assert.match(html, /朗讀例句/);
-  assert.match(html, /版本 v2 · 含例句朗讀/);
+  assert.match(html, /版本 v3 · 例句中英＋標出單字/);
   const worker = readFileSync(new URL("../sw.js", import.meta.url), "utf8");
-  assert.match(worker, /const CACHE = "en-flashcards-v2"/);
+  assert.match(worker, /const CACHE = "en-flashcards-v3"/);
   assert.match(worker, /keys\.filter\(\(key\) => key !== CACHE\)/);
   assert.match(worker, /js\/speech\.js/);
+  assert.match(worker, /js\/highlight\.js/);
   assert.equal(readFileSync(new URL("../js/store.js", import.meta.url), "utf8").includes('STORAGE_KEY = "en-flashcards.v1"'), true);
 });
