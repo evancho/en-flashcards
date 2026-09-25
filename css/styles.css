@@ -453,14 +453,13 @@ legend { padding: 0 6px; font-weight: 760; }
 }
 
 .deck-actions {
-  position: sticky;
-  bottom: 0;
+  flex: none;
   z-index: 2;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 12px 0 4px;
-  background: linear-gradient(to bottom, transparent, var(--bg) 12px);
+  padding: 8px 0 0;
+  background: var(--bg);
 }
 
 .deck-actions .btn { width: 100%; }
@@ -498,7 +497,7 @@ legend { padding: 0 6px; font-weight: 760; }
 
 .nav {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 4px;
   padding: 6px 8px calc(8px + env(safe-area-inset-bottom));
   border-top: 1px solid var(--line);
@@ -508,11 +507,21 @@ legend { padding: 0 6px; font-weight: 760; }
 .nav-btn {
   position: relative;
   min-height: 52px;
+  padding: 4px 2px;
   border: 0;
   border-radius: 12px;
   background: transparent;
   color: var(--muted);
+  font-size: 0.92rem;
   font-weight: 760;
+}
+
+#view-decks:not([hidden]) { overflow: hidden; }
+
+#view-decks .deck-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
 }
 
 .nav-btn.active {

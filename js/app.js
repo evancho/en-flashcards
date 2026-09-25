@@ -305,7 +305,7 @@ function openView(name) {
   state.view = name;
   if (name === "review") refreshQueue();
   render();
-  if (name === "backup") loadCatalog();
+  if (name === "decks") loadCatalog();
   if (name === "add") $("#front").focus();
 }
 
@@ -845,8 +845,7 @@ function bind() {
   });
   $("#empty-examples").addEventListener("click", addExamples);
   $("#empty-open-decks").addEventListener("click", () => {
-    openView("backup");
-    $("#deck-catalog").scrollIntoView({ block: "start" });
+    openView("decks");
   });
   $("#deck-list").addEventListener("change", (event) => {
     if (event.target.classList?.contains("deck-check")) syncDeckSelection();
