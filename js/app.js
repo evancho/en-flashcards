@@ -1,5 +1,6 @@
 import { createStore, parseImport } from "./store.js";
 import { formatDelay, previewPlan, stageLabel, formatDue } from "./srs.js";
+import { prepareVoices, speakEnglish, speechAvailable } from "./speech.js";
 
 const TIP_KEY = "en-flashcards.ios-tip";
 const EXAMPLES = [
@@ -121,14 +122,24 @@ function refreshQueue() {
 
 function setRevealed(on) {
   state.revealed = on;
-  const card = $("#flashcard");
-  card.classList.toggle("revealed", on);
-  card.setAttribute("role", on ? "group" : "button");
-  card.tabIndex = on ? -1 : 0;
+  const face = $("#card-face");
+  $("#flashcard").classList.toggle("revealed", on);
+  face.setAttribute("role", on ? "group" : "button");
+  face.tabIndex = on ? -1 : 0;
   $("#card-back").hidden = !on;
   $("#card-prompt").hidden = on;
   $("#ratings").hidden = !on;
   $("#card-kicker").textContent = on ? "答案" : "英文";
+  const example = state.current?.example || "";
+  const exampleZh = state.current?.exampleZh || "";
+  $("#example-block").hidden = !on || !example;
+  $("#card-example").textContent = example;
+  $("#card-example-zh").textContent = exampleZh;
+  $("#card-example-zh").hidden = !exampleZh;
+  const canSpeak = speechAvailable();
+  $("#speak-front").hidden = !canSpeak;
+  $("#speak-example").hidden = !canSpeak;
+  $("#speech-note").hidden = canSpeak;
 }
 
 function renderChrome() {
@@ -206,13 +217,21 @@ function renderForm() {
   $("#edit-note").hidden = !editing;
   $("#cancel-edit").hidden = !editing;
   $("#delete-editing").hidden = !editing;
+  const canSpeak = speechAvailable();
+  $("#speak-form-front").hidden = !canSpeak;
+  $("#speak-form-example").hidden = !canSpeak;
 }
 
 function renderList() {
   const { cards, corrupt } = store.load();
   const query = $("#search").value.trim().toLowerCase();
   const matched = cards
-    .filter((card) => !query || card.front.toLowerCase().includes(query) || card.back.toLowerCase().includes(query))
+    .filter((card) => {
+      if (!query) return true;
+      return [card.front, card.back, card.example, card.exampleZh].some((value) =>
+        String(value || "").toLowerCase().includes(query),
+      );
+    })
     .sort((a, b) => a.due - b.due || a.front.localeCompare(b.front));
   $("#list-count").textContent = corrupt ? "資料讀不出來" : `共 ${cards.length} 張，顯示 ${matched.length} 張`;
   const list = $("#card-list");
@@ -225,6 +244,10 @@ function renderList() {
     const title = document.createElement("h3");
     title.lang = "en";
     title.textContent = card.front;
+    const head = document.createElement("div");
+    head.className = "title-row";
+    head.append(title);
+    if (speechAvailable()) head.append(speakButton(card.front, "發音"));
     const back = document.createElement("p");
     back.className = "meaning-line";
     back.textContent = card.back;
@@ -244,7 +267,22 @@ function renderList() {
     remove.dataset.delete = card.id;
     remove.textContent = "刪除";
     actions.append(edit, remove);
-    row.append(title, back, meta, actions);
+    row.append(head, back);
+    if (card.example) {
+      const example = document.createElement("p");
+      example.className = "example-line";
+      example.lang = "en";
+      example.textContent = card.example;
+      row.append(example);
+      if (card.exampleZh) {
+        const gloss = document.createElement("p");
+        gloss.className = "example-zh";
+        gloss.textContent = card.exampleZh;
+        row.append(gloss);
+      }
+      if (speechAvailable()) row.append(speakButton(card.example, "朗讀例句"));
+    }
+    row.append(meta, actions);
     list.append(row);
   }
 }
@@ -275,9 +313,33 @@ function resetForm() {
   $("#card-form").reset();
 }
 
+function exampleFields() {
+  return { example: $("#example").value, exampleZh: $("#example-zh").value };
+}
+
 function fillForm(card) {
   $("#front").value = card.front;
   $("#back").value = card.back;
+  $("#example").value = card.example || "";
+  $("#example-zh").value = card.exampleZh || "";
+}
+
+function speakButton(text, label) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "speak";
+  button.dataset.speak = text;
+  button.textContent = label;
+  return button;
+}
+
+function speakLine(text, { quiet = false } = {}) {
+  const line = String(text ?? "").trim();
+  if (!line) {
+    if (!quiet) toast("沒有可以朗讀的英文。");
+    return;
+  }
+  if (!speakEnglish(line) && !quiet) toast("這台裝置無法朗讀英文。");
 }
 
 function reveal() {
@@ -285,6 +347,13 @@ function reveal() {
   setRevealed(true);
   state.revealed = true;
   $("#ratings").querySelector("button")?.focus();
+}
+
+function revealAndSpeak() {
+  if (!state.current || state.revealed) return;
+  const word = state.current.front;
+  reveal();
+  speakLine(word, { quiet: true });
 }
 
 function rate(rating) {
@@ -325,14 +394,14 @@ function saveForm() {
   state.saving = true;
   try {
     if (state.editingId) {
-      store.updateText(state.editingId, front, back);
+      store.updateText(state.editingId, front, back, Date.now(), exampleFields());
       toast("已儲存");
       const returnId = state.editingId;
       resetForm();
       openView("list");
       document.querySelector(`[data-edit="${CSS.escape(returnId)}"]`)?.focus();
     } else {
-      const card = store.add(front, back);
+      const card = store.add(front, back, Date.now(), exampleFields());
       $("#card-form").reset();
       toast(`已加入「${card.front}」`);
       render();
@@ -406,10 +475,12 @@ async function loadStarterDeck() {
     state.queue = [];
     state.current = null;
     state.revealed = false;
-    if (result.added > 0 && state.view === "review") refreshQueue();
-    if (result.added === 0) toast(`已加入 0 張，這些詞都已經在詞庫裡`);
-    else if (result.skipped > 0) toast(`已加入 ${result.added} 張，略過 ${result.skipped} 張已有的`);
-    else toast(`已加入 ${result.added} 張`);
+    if ((result.added > 0 || result.filled > 0) && state.view === "review") refreshQueue();
+    if (result.added > 0 && result.filled > 0) toast(`已加入 ${result.added} 張，並補上 ${result.filled} 張例句`);
+    else if (result.added > 0 && result.skipped > 0) toast(`已加入 ${result.added} 張，略過 ${result.skipped} 張已有的`);
+    else if (result.added > 0) toast(`已加入 ${result.added} 張`);
+    else if (result.filled > 0) toast(`已補上 ${result.filled} 張例句`);
+    else toast("已加入 0 張，這些詞都已經在詞庫裡");
     render();
   } catch (error) {
     toast(explainError(error));
@@ -613,13 +684,26 @@ function bind() {
     }
   });
 
-  $("#flashcard").addEventListener("click", () => reveal());
-  $("#flashcard").addEventListener("keydown", (event) => {
+  $("#flashcard").addEventListener("click", (event) => {
+    if (event.target.closest("button")) return;
+    revealAndSpeak();
+  });
+  $("#card-face").addEventListener("keydown", (event) => {
     if (state.revealed) return;
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
-      reveal();
+      revealAndSpeak();
     }
+  });
+  $("#speak-front").addEventListener("click", () => speakLine(state.current?.front));
+  $("#speak-example").addEventListener("click", () => speakLine(state.current?.example));
+  $("#speak-form-front").addEventListener("click", () => speakLine($("#front").value));
+  $("#speak-form-example").addEventListener("click", () => speakLine($("#example").value));
+  $("#card-list").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-speak]");
+    if (!button) return;
+    event.stopPropagation();
+    speakLine(button.dataset.speak);
   });
   $("#ratings").addEventListener("click", (event) => {
     const button = event.target.closest("[data-rating]");
@@ -702,10 +786,10 @@ function bind() {
       return;
     }
     if (!$("#dialog").hidden || state.view !== "review" || event.target.closest("input, textarea")) return;
-    if ((event.key === " " || event.key === "Enter") && !state.revealed && state.current && event.target.id !== "flashcard") {
+    if ((event.key === " " || event.key === "Enter") && !state.revealed && state.current && event.target.id !== "card-face") {
       if (event.target.closest("button")) return;
       event.preventDefault();
-      reveal();
+      revealAndSpeak();
     }
     if (!state.revealed) return;
     const map = { 1: "again", 2: "hard", 3: "good", 4: "easy" };
@@ -717,6 +801,7 @@ function bind() {
 }
 
 bind();
+prepareVoices();
 showIosTip();
 openView("review");
 registerServiceWorker();
