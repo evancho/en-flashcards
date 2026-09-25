@@ -471,12 +471,29 @@ function deckPath(path) {
   return value;
 }
 
-function reportDeckMerge(result) {
-  if (result.added > 0 && result.filled > 0) toast(`已加入 ${result.added} 張，並補上 ${result.filled} 張例句`);
-  else if (result.added > 0 && result.skipped > 0) toast(`已加入 ${result.added} 張，略過 ${result.skipped} 張已有的`);
-  else if (result.added > 0) toast(`已加入 ${result.added} 張`);
-  else if (result.filled > 0) toast(`已補上 ${result.filled} 張例句`);
+function reportSelectedMerge(added, filled, skipped) {
+  if (added > 0 && filled > 0) toast(`已加入 ${added} 張、補上 ${filled} 張例句`);
+  else if (added > 0 && skipped > 0) toast(`已加入 ${added} 張，略過 ${skipped} 張已有的`);
+  else if (added > 0) toast(`已加入 ${added} 張`);
+  else if (filled > 0) toast(`已補上 ${filled} 張例句`);
   else toast("已加入 0 張，這些詞都已經在詞庫裡");
+}
+
+function selectedDeckBoxes() {
+  return [...document.querySelectorAll("#deck-list .deck-check")];
+}
+
+function syncDeckSelection() {
+  const boxes = selectedDeckBoxes();
+  const selected = boxes.filter((box) => box.checked).length;
+  const busy = state.loadingDeck;
+  const button = $("#load-selected");
+  button.disabled = busy || selected === 0;
+  button.textContent = busy ? "載入中…" : "載入所選";
+  $("#deck-selected").textContent = `已選 ${selected} 套`;
+  $("#deck-select-all").disabled = busy || boxes.length === 0;
+  $("#deck-clear").disabled = busy || selected === 0;
+  for (const box of boxes) box.disabled = busy;
 }
 
 let catalogToken = 0;
@@ -502,11 +519,13 @@ async function loadCatalog() {
     }
     note.hidden = shown > 0;
     note.textContent = shown > 0 ? "" : "目前沒有可載入的詞庫。";
+    syncDeckSelection();
   } catch {
     if (token !== catalogToken) return;
     list.replaceChildren();
     note.hidden = false;
     note.textContent = "請連上網路打開一次，才能看到詞庫。";
+    syncDeckSelection();
     toast("請連上網路打開一次，才能看到詞庫。");
   }
 }
@@ -515,8 +534,14 @@ function deckRow(deck) {
   const path = deckPath(deck?.path);
   const title = String(deck?.title || "").trim();
   if (!path || !title) return null;
-  const row = document.createElement("article");
+  const row = document.createElement("label");
   row.className = "deck-row";
+  const box = document.createElement("input");
+  box.type = "checkbox";
+  box.className = "deck-check";
+  box.value = path;
+  const copy = document.createElement("span");
+  copy.className = "deck-copy";
   const heading = document.createElement("h3");
   heading.textContent = title;
   const description = document.createElement("p");
@@ -528,53 +553,63 @@ function deckRow(deck) {
   meta.className = "hint";
   meta.textContent = Number.isFinite(count) && count >= 0 ? `${count} 張` : "";
   if (!meta.textContent) meta.hidden = true;
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "btn";
-  button.textContent = "載入／更新";
-  button.addEventListener("click", () => loadDeck(path, button));
-  row.append(heading, description, meta, button);
+  copy.append(heading, description, meta);
+  row.append(box, copy);
   return row;
 }
 
-async function loadDeck(path, button) {
+async function loadSelectedDecks() {
   if (state.loadingDeck) return;
+  const paths = selectedDeckBoxes()
+    .filter((box) => box.checked)
+    .map((box) => deckPath(box.value))
+    .filter(Boolean);
+  if (!paths.length) return;
   state.loadingDeck = true;
-  button.disabled = true;
-  button.textContent = "載入中…";
+  syncDeckSelection();
+  let added = 0;
+  let filled = 0;
+  let skipped = 0;
+  let failed = 0;
   try {
-    let response;
-    try {
-      response = await fetch(path);
-    } catch {
-      toast("請連上網路打開一次，才能載入詞庫。");
-      return;
+    for (const path of paths) {
+      let response;
+      try {
+        response = await fetch(path);
+      } catch {
+        failed += 1;
+        continue;
+      }
+      if (!response.ok) {
+        failed += 1;
+        continue;
+      }
+      let list;
+      try {
+        list = parseImport(await response.text());
+      } catch {
+        failed += 1;
+        continue;
+      }
+      const result = store.mergeSkipExisting(list);
+      added += result.added;
+      filled += result.filled;
+      skipped += result.skipped;
     }
-    if (!response.ok) {
-      toast("請連上網路打開一次，才能載入詞庫。");
-      return;
-    }
-    let list;
-    try {
-      list = parseImport(await response.text());
-    } catch {
-      toast("這份詞庫讀不出來。");
-      return;
-    }
-    const result = store.mergeSkipExisting(list);
     state.queue = [];
     state.current = null;
     state.revealed = false;
-    if ((result.added > 0 || result.filled > 0) && state.view === "review") refreshQueue();
-    reportDeckMerge(result);
+    if ((added > 0 || filled > 0) && state.view === "review") refreshQueue();
+    if (failed === paths.length) toast("請連上網路打開一次，才能載入詞庫。");
+    else if (failed > 0) toast(`已加入 ${added} 張、補上 ${filled} 張例句。有 ${failed} 套沒讀到，請連上網路再試。`);
+    else reportSelectedMerge(added, filled, skipped);
     render();
   } catch (error) {
     toast(explainError(error));
     render();
   } finally {
     state.loadingDeck = false;
-    button.disabled = false;
-    button.textContent = "載入／更新";
+    syncDeckSelection();
   }
 }
 
@@ -813,6 +848,18 @@ function bind() {
     openView("backup");
     $("#deck-catalog").scrollIntoView({ block: "start" });
   });
+  $("#deck-list").addEventListener("change", (event) => {
+    if (event.target.classList?.contains("deck-check")) syncDeckSelection();
+  });
+  $("#deck-select-all").addEventListener("click", () => {
+    for (const box of selectedDeckBoxes()) box.checked = true;
+    syncDeckSelection();
+  });
+  $("#deck-clear").addEventListener("click", () => {
+    for (const box of selectedDeckBoxes()) box.checked = false;
+    syncDeckSelection();
+  });
+  $("#load-selected").addEventListener("click", loadSelectedDecks);
   $("#empty-recheck").addEventListener("click", () => {
     state.queue = [];
     state.current = null;

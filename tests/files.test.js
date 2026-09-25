@@ -35,9 +35,14 @@ test("page points at the manifest, stylesheet, script, and icons", () => {
   assert.equal(html.includes('id="load-deck"'), false);
   assert.equal(html.includes('id="empty-load-deck"'), false);
   const app = readFileSync(new URL("../js/app.js", import.meta.url), "utf8");
+  assert.match(html, /載入所選/);
+  assert.match(html, /全選/);
+  assert.match(html, /清除選取/);
+  assert.equal(html.includes("載入／更新"), false);
   assert.match(app, /const DECK_CATALOG = "decks\/index\.json"/);
-  assert.match(app, /載入／更新/);
-  const loader = app.slice(app.indexOf("async function loadDeck"), app.indexOf("function addExamples"));
+  assert.match(app, /載入所選/);
+  assert.equal(app.includes("載入／更新"), false);
+  const loader = app.slice(app.indexOf("async function loadSelectedDecks"), app.indexOf("function addExamples"));
   assert.match(loader, /fetch\(path\)/);
   assert.match(loader, /mergeSkipExisting/);
   assert.doesNotMatch(loader, /replaceAll/);
@@ -73,9 +78,9 @@ test("page points at the manifest, stylesheet, script, and icons", () => {
   });
   assert.match(html, /發音/);
   assert.match(html, /朗讀例句/);
-  assert.match(html, /版本 v4 · 詞庫列表/);
+  assert.match(html, /版本 v5 · 詞庫多選載入/);
   const worker = readFileSync(new URL("../sw.js", import.meta.url), "utf8");
-  assert.match(worker, /const CACHE = "en-flashcards-v4"/);
+  assert.match(worker, /const CACHE = "en-flashcards-v5"/);
   assert.match(worker, /keys\.filter\(\(key\) => key !== CACHE\)/);
   assert.match(worker, /js\/speech\.js/);
   assert.match(worker, /js\/highlight\.js/);

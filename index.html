@@ -151,17 +151,27 @@
 
         <section id="view-backup" class="view scroll" hidden>
           <h2>備份</h2>
-          <p class="hint" id="app-version">版本 v4 · 詞庫列表</p>
+          <p class="hint" id="app-version">版本 v5 · 詞庫多選載入</p>
           <p class="lede">單字存在這個畫面所在的瀏覽器或主畫面圖示裡，不會上傳。</p>
           <p class="stat-line">這台裝置 <strong id="stat-total">0</strong> 張，待複習 <strong id="stat-due">0</strong> 張。</p>
           <p id="offline-flag" class="hint" hidden>網頁已存進這台裝置，斷線後從圖示打開仍可使用。</p>
           <p id="offline-missing" class="hint" hidden>這個瀏覽器不能把網頁存下來離線開。單字仍可記在本機，但斷線時可能打不開。</p>
 
           <div class="stack" id="deck-catalog">
-            <h2>詞庫</h2>
-            <p class="hint">只加入還沒有的單字。已有的卡片會留著，缺少的英文例句和中文例句會補上，不會重設複習進度。</p>
+            <div class="list-head">
+              <h2>詞庫</h2>
+              <div class="deck-tools">
+                <button type="button" class="btn secondary" id="deck-select-all">全選</button>
+                <button type="button" class="btn secondary" id="deck-clear">清除選取</button>
+              </div>
+            </div>
+            <p class="hint">勾選要加入的套裝。已有的卡片會留著，缺少的英文例句和中文例句會補上，不會重設複習進度。</p>
             <div id="deck-list" class="deck-list"></div>
             <p id="deck-catalog-note" class="hint" hidden></p>
+            <div class="deck-actions">
+              <p id="deck-selected" class="hint">已選 0 套</p>
+              <button type="button" class="btn" id="load-selected" disabled>載入所選</button>
+            </div>
           </div>
 
           <div class="stack">

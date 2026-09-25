@@ -407,19 +407,63 @@ legend { padding: 0 6px; font-weight: 760; }
 
 .card-list, .deck-list { display: flex; flex-direction: column; gap: 10px; padding-bottom: 8px; }
 
+.deck-tools { display: flex; gap: 8px; flex: none; }
+
+.deck-tools .btn {
+  min-height: 44px;
+  padding: 8px 12px;
+  font-size: 0.95rem;
+}
+
 .deck-row {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 16px;
   padding: 14px;
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+  font-weight: 500;
+  cursor: pointer;
 }
 
-.deck-row h3 { margin: 0; font-size: 1.15rem; }
+.deck-row input {
+  width: 1.45rem;
+  height: 1.45rem;
+  margin-top: 0.15rem;
+  flex: none;
+  accent-color: var(--accent);
+}
+
+.deck-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.deck-row h3 { margin: 0; font-size: 1.15rem; font-weight: 760; }
 
 .deck-row .hint { margin: 0; }
+
+.deck-row:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.deck-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0 4px;
+  background: linear-gradient(to bottom, transparent, var(--bg) 12px);
+}
+
+.deck-actions .btn { width: 100%; }
 
 .card-row {
   background: var(--card);
