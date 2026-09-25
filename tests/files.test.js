@@ -92,7 +92,7 @@ test("page points at the manifest, stylesheet, script, and icons", () => {
   assert.match(html, /發音/);
   assert.match(html, /朗讀例句/);
   assert.match(html, /朗讀中文/);
-  assert.match(html, /版本 v10 · 通勤模式/);
+  assert.match(html, /版本 v11 · 通勤橫放/);
   assert.match(html, /id="open-commute"/);
   const commuteView = html.slice(html.indexOf('id="view-commute"'), html.indexOf('id="view-add"'));
   assert.match(commuteView, /播放/);
@@ -110,7 +110,7 @@ test("page points at the manifest, stylesheet, script, and icons", () => {
   assert.match(app, /shuffleInPlace/);
   assert.match(readFileSync(new URL("../js/review.js", import.meta.url), "utf8"), /en-flashcards\.settings/);
   const worker = readFileSync(new URL("../sw.js", import.meta.url), "utf8");
-  assert.match(worker, /const CACHE = "en-flashcards-v10"/);
+  assert.match(worker, /const CACHE = "en-flashcards-v11"/);
   assert.match(worker, /keys\.filter\(\(key\) => key !== CACHE\)/);
   assert.match(worker, /js\/speech\.js/);
   assert.match(worker, /js\/highlight\.js/);
