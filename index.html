@@ -112,15 +112,17 @@
             <h2>通勤模式</h2>
             <p id="commute-progress" class="session-count"></p>
           </div>
-          <p class="hint">點一下播放才會出聲。只聽不評分，複習進度不會改。</p>
-          <div id="commute-card" class="commute-card">
-            <p id="commute-en" class="word" lang="en"></p>
-            <p id="commute-zh" class="meaning" lang="zh-Hant"></p>
-            <p id="commute-example" class="example-line" lang="en" hidden></p>
-            <p id="commute-example-zh" class="example-zh" lang="zh-Hant" hidden></p>
+          <div class="commute-body">
+            <p id="commute-hint" class="hint">點一下播放才會出聲。只聽不評分，複習進度不會改。</p>
+            <div id="commute-card" class="commute-card">
+              <p id="commute-en" class="word" lang="en"></p>
+              <p id="commute-zh" class="meaning" lang="zh-Hant"></p>
+              <p id="commute-example" class="example-line" lang="en" hidden></p>
+              <p id="commute-example-zh" class="example-zh" lang="zh-Hant" hidden></p>
+            </div>
+            <p id="commute-empty" class="hint" hidden>還沒有單字。</p>
+            <p id="commute-speech-note" class="hint" hidden>這台裝置無法朗讀。</p>
           </div>
-          <p id="commute-empty" class="hint" hidden>還沒有單字。</p>
-          <p id="commute-speech-note" class="hint" hidden>這台裝置無法朗讀。</p>
           <div class="commute-controls">
             <button type="button" class="btn" id="commute-play">播放</button>
             <div class="row">
@@ -209,7 +211,7 @@
 
         <section id="view-backup" class="view scroll" hidden>
           <h2>備份</h2>
-          <p class="hint" id="app-version">版本 v10 · 通勤模式</p>
+          <p class="hint" id="app-version">版本 v11 · 通勤橫放</p>
           <p class="lede">單字存在這個畫面所在的瀏覽器或主畫面圖示裡，不會上傳。</p>
           <p class="stat-line">這台裝置 <strong id="stat-total">0</strong> 張，待複習 <strong id="stat-due">0</strong> 張。</p>
           <p id="offline-flag" class="hint" hidden>網頁已存進這台裝置，斷線後從圖示打開仍可使用。</p>
