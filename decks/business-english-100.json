@@ -756,7 +756,7 @@
     },
     {
       "id": "biz-051",
-      "front": "client",
+      "front": "the client",
       "back": "客戶",
       "example": "The client asked for a shorter summary.",
       "exampleZh": "客戶希望摘要再短一點。",
