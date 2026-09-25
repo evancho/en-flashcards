@@ -219,6 +219,21 @@ h2 { margin: 0; font-size: 1.25rem; }
   overflow-wrap: anywhere;
 }
 
+mark.term {
+  background: #f4d48a;
+  color: #1f1a17;
+  font-weight: 760;
+  padding: 0 0.08em;
+  border-radius: 0.18em;
+}
+
+@media (prefers-color-scheme: dark) {
+  mark.term {
+    background: #8a6a22;
+    color: #fff8e8;
+  }
+}
+
 .example-zh {
   margin: 0;
   color: var(--muted);
@@ -390,7 +405,21 @@ legend { padding: 0 6px; font-weight: 760; }
 
 .list-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 
-.card-list { display: flex; flex-direction: column; gap: 10px; padding-bottom: 8px; }
+.card-list, .deck-list { display: flex; flex-direction: column; gap: 10px; padding-bottom: 8px; }
+
+.deck-row {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.deck-row h3 { margin: 0; font-size: 1.15rem; }
+
+.deck-row .hint { margin: 0; }
 
 .card-row {
   background: var(--card);

@@ -129,6 +129,33 @@ test("reloading the starter deck fills a missing example and keeps progress", ()
   assert.equal(store.get(card.id).example, "The app calls an API.");
 });
 
+test("reloading fills a missing Chinese gloss and keeps the English example", () => {
+  const store = createStore(memory());
+  const card = store.add("api", "我自己的註記", 1_700_000_000_000, { example: "The app calls an API." });
+  const reviewed = store.review(card.id, "easy");
+  const result = store.mergeSkipExisting([
+    {
+      id: "tech-001",
+      front: "API",
+      back: "應用程式介面",
+      example: "A different sentence.",
+      exampleZh: "App 會呼叫 API。",
+      interval: 0,
+      reps: 0,
+      due: 1,
+    },
+  ]);
+  assert.equal(result.filled, 1);
+  assert.equal(result.added, 0);
+  const after = store.get(card.id);
+  assert.equal(after.example, "The app calls an API.");
+  assert.equal(after.exampleZh, "App 會呼叫 API。");
+  assert.equal(after.back, "我自己的註記");
+  assert.equal(after.interval, reviewed.interval);
+  assert.equal(after.reps, reviewed.reps);
+  assert.equal(after.due, reviewed.due);
+});
+
 test("corrupt storage is not overwritten by a new card", () => {
   const storage = memory();
   storage.setItem(STORAGE_KEY, "{not json");
