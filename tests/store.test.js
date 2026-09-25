@@ -80,6 +80,55 @@ test("starter merge skips the same id or front and leaves existing cards", () =>
   assert.equal(store.get("tech-003").back, "端點");
 });
 
+test("examples survive export and can be cleared without touching other fields", () => {
+  const store = createStore(memory());
+  const card = store.add("cache", "快取", 1_700_000_000_000, {
+    example: "The cache is warm.",
+    exampleZh: "快取是熱的。",
+  });
+  assert.equal(store.exportPayload(1_700_000_000_000).cards[0].example, "The cache is warm.");
+  assert.equal(store.exportPayload(1_700_000_000_000).cards[0].exampleZh, "快取是熱的。");
+  store.updateText(card.id, "cache", "快取", 1_700_000_000_000);
+  assert.equal(store.get(card.id).example, "The cache is warm.");
+  store.updateText(card.id, "cache", "快取", 1_700_000_000_000, { example: "  ", exampleZh: "" });
+  assert.equal(store.get(card.id).example, undefined);
+  assert.equal(store.get(card.id).exampleZh, undefined);
+});
+
+test("reloading the starter deck fills a missing example and keeps progress", () => {
+  const store = createStore(memory());
+  const card = store.add("api", "我自己的註記");
+  const reviewed = store.review(card.id, "easy");
+  const result = store.mergeSkipExisting([
+    {
+      id: "tech-001",
+      front: "API",
+      back: "應用程式介面",
+      example: "The app calls an API.",
+      exampleZh: "App 會呼叫 API。",
+      interval: 0,
+      reps: 0,
+      due: 1,
+    },
+  ]);
+  assert.equal(result.added, 0);
+  assert.equal(result.filled, 1);
+  assert.equal(store.stats().total, 1);
+  const after = store.get(card.id);
+  assert.equal(after.example, "The app calls an API.");
+  assert.equal(after.exampleZh, "App 會呼叫 API。");
+  assert.equal(after.back, "我自己的註記");
+  assert.equal(after.interval, reviewed.interval);
+  assert.equal(after.reps, reviewed.reps);
+  assert.equal(after.due, reviewed.due);
+  const second = store.mergeSkipExisting([
+    { id: "tech-001", front: "API", back: "別的", example: "A different sentence." },
+  ]);
+  assert.equal(second.filled, 0);
+  assert.equal(second.added, 0);
+  assert.equal(store.get(card.id).example, "The app calls an API.");
+});
+
 test("corrupt storage is not overwritten by a new card", () => {
   const storage = memory();
   storage.setItem(STORAGE_KEY, "{not json");

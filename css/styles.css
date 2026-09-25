@@ -184,7 +184,55 @@ h2 { margin: 0; font-size: 1.25rem; }
   text-align: center;
 }
 
-.flashcard:active { transform: scale(0.99); }
+.card-face {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.card-face:active { transform: scale(0.99); }
+
+.speak {
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-weight: 760;
+  padding: 8px 16px;
+}
+
+.example-block {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.example-line {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.example-zh {
+  margin: 0;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.title-row h3 { flex: 1; margin: 0; }
 
 .kicker {
   font-size: 0.85rem;

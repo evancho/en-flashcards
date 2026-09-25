@@ -51,11 +51,21 @@
         <section id="view-review" class="view">
           <p id="review-count" class="session-count" aria-live="polite"></p>
           <div id="review-card-wrap" class="card-wrap">
-            <div id="flashcard" class="flashcard" role="button" tabindex="0">
-              <span id="card-kicker" class="kicker">英文</span>
-              <span id="card-front" class="word" lang="en"></span>
-              <span id="card-back" class="meaning" lang="zh-Hant" hidden></span>
-              <span id="card-prompt" class="prompt">輕點看答案</span>
+            <div id="flashcard" class="flashcard">
+              <div id="card-face" class="card-face" role="button" tabindex="0">
+                <span id="card-kicker" class="kicker">英文</span>
+                <span id="card-front" class="word" lang="en"></span>
+                <span id="card-back" class="meaning" lang="zh-Hant" hidden></span>
+                <span id="card-prompt" class="prompt">輕點看答案</span>
+              </div>
+              <button type="button" class="speak" id="speak-front">發音</button>
+              <div id="example-block" class="example-block" hidden>
+                <span class="kicker">例句</span>
+                <p id="card-example" class="example-line" lang="en"></p>
+                <p id="card-example-zh" class="example-zh" lang="zh-Hant" hidden></p>
+                <button type="button" class="speak" id="speak-example">朗讀例句</button>
+              </div>
+              <p id="speech-note" class="hint" hidden>這台裝置無法朗讀英文。</p>
             </div>
             <div id="ratings" class="ratings" hidden>
               <button type="button" class="rate rate-again" data-rating="again">
@@ -107,6 +117,18 @@
               中文或備註
               <textarea id="back" name="back" maxlength="1000" rows="4" lang="zh-Hant" placeholder="蘋果"></textarea>
             </label>
+            <label>
+              例句（英文，可空白）
+              <textarea id="example" name="example" maxlength="500" rows="3" lang="en" placeholder="The API returns JSON."></textarea>
+            </label>
+            <label>
+              例句中文（可空白）
+              <textarea id="example-zh" name="example-zh" maxlength="500" rows="2" lang="zh-Hant" placeholder="這個 API 回傳 JSON。"></textarea>
+            </label>
+            <div class="row">
+              <button type="button" class="btn secondary" id="speak-form-front">發音</button>
+              <button type="button" class="btn secondary" id="speak-form-example">朗讀例句</button>
+            </div>
             <p id="edit-note" class="hint" hidden>修改文字不會重設複習進度。</p>
             <button type="submit" class="btn" id="save-btn">儲存</button>
             <button type="button" class="btn secondary" id="cancel-edit" hidden>取消</button>
@@ -136,7 +158,7 @@
 
           <div class="stack">
             <button type="button" class="btn" id="load-deck">載入科技英文 100 詞</button>
-            <p class="hint">只加入還沒有的單字。已在這台裝置上的卡片會留著，不會被蓋掉。</p>
+            <p class="hint">只加入還沒有的單字。已有的卡片會留著，缺少的例句會補上，不會重設複習進度。</p>
           </div>
 
           <div class="stack">

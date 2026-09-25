@@ -3,6 +3,12 @@ import { schedule } from "./srs.js";
 export const STORAGE_KEY = "en-flashcards.v1";
 const MAX_FRONT = 300;
 const MAX_BACK = 1000;
+const MAX_EXAMPLE = 500;
+
+function optionalText(value, max) {
+  const text = String(value ?? "").trim().slice(0, max);
+  return text || "";
+}
 
 function uid() {
   if (globalThis.crypto?.randomUUID) return crypto.randomUUID();
@@ -25,7 +31,7 @@ export function normalizeCard(raw, now = Date.now()) {
   if (!front || !back) return null;
   const id = typeof raw.id === "string" && /^[\w-]{1,80}$/.test(raw.id) ? raw.id : uid();
   const horizon = now + 100 * 365 * 24 * 60 * 60 * 1000;
-  return {
+  const card = {
     id,
     front,
     back,
@@ -38,6 +44,25 @@ export function normalizeCard(raw, now = Date.now()) {
     lapses: clamp(Math.round(num(raw.lapses, 0)), 0, 1_000_000),
     step: Number(raw.step) >= 1 ? 1 : 0,
   };
+  const example = optionalText(raw.example, MAX_EXAMPLE);
+  const exampleZh = optionalText(raw.exampleZh, MAX_EXAMPLE);
+  if (example) card.example = example;
+  if (exampleZh) card.exampleZh = exampleZh;
+  return card;
+}
+
+function fillMissingExample(existing, incoming) {
+  const next = { ...existing };
+  let changed = false;
+  if (!existing.example && incoming.example) {
+    next.example = incoming.example;
+    changed = true;
+  }
+  if (!existing.exampleZh && incoming.exampleZh) {
+    next.exampleZh = incoming.exampleZh;
+    changed = true;
+  }
+  return changed ? next : null;
 }
 
 export function parseImport(text) {
@@ -109,12 +134,14 @@ export function createStore(storage) {
     return snapshot.cards;
   }
 
-  function blankCard(front, back, now) {
+  function blankCard(front, back, now, extras = {}) {
     const card = normalizeCard(
       {
         id: uid(),
         front,
         back,
+        example: extras.example,
+        exampleZh: extras.exampleZh,
         createdAt: now,
         updatedAt: now,
         due: now,
@@ -139,18 +166,23 @@ export function createStore(storage) {
     get(id) {
       return load().cards.find((card) => card.id === id) ?? null;
     },
-    add(front, back, now = Date.now()) {
+    add(front, back, now = Date.now(), extras = {}) {
       const cards = requireCards();
-      const card = blankCard(front, back, now);
+      const card = blankCard(front, back, now, extras);
       cards.push(card);
       persist(cards);
       return card;
     },
-    updateText(id, front, back, now = Date.now()) {
+    updateText(id, front, back, now = Date.now(), extras) {
       const cards = requireCards();
       const next = cards.map((card) => {
         if (card.id !== id) return card;
-        const updated = normalizeCard({ ...card, front, back, updatedAt: now }, now);
+        const patch = { ...card, front, back, updatedAt: now };
+        if (extras) {
+          patch.example = extras.example ?? "";
+          patch.exampleZh = extras.exampleZh ?? "";
+        }
+        const updated = normalizeCard(patch, now);
         if (!updated) {
           const error = new Error("empty");
           error.code = "empty";
@@ -216,25 +248,40 @@ export function createStore(storage) {
     },
     mergeSkipExisting(list) {
       const cards = requireCards();
-      const ids = new Set(cards.map((card) => card.id));
-      const fronts = new Set(cards.map((card) => card.front.trim().toLowerCase()));
+      const byId = new Map(cards.map((card) => [card.id, card]));
+      const byFront = new Map(cards.map((card) => [card.front.trim().toLowerCase(), card]));
       const next = cards.slice();
       let added = 0;
       let skipped = 0;
+      let filled = 0;
       for (const raw of list) {
         const card = normalizeCard(raw);
-        const frontKey = card ? card.front.trim().toLowerCase() : "";
-        if (!card || ids.has(card.id) || fronts.has(frontKey)) {
+        if (!card) {
           skipped += 1;
           continue;
         }
-        ids.add(card.id);
-        fronts.add(frontKey);
+        const frontKey = card.front.trim().toLowerCase();
+        const existing = byId.get(card.id) || byFront.get(frontKey);
+        if (existing) {
+          const patched = fillMissingExample(existing, card);
+          if (!patched) {
+            skipped += 1;
+            continue;
+          }
+          const index = next.findIndex((item) => item.id === existing.id);
+          next[index] = patched;
+          byId.set(existing.id, patched);
+          byFront.set(existing.front.trim().toLowerCase(), patched);
+          filled += 1;
+          continue;
+        }
+        byId.set(card.id, card);
+        byFront.set(frontKey, card);
         next.push(card);
         added += 1;
       }
-      if (added > 0) persist(next);
-      return { added, skipped, total: next.length };
+      if (added > 0 || filled > 0) persist(next);
+      return { added, skipped, filled, total: next.length };
     },
     reset() {
       try {

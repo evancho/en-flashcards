@@ -38,4 +38,14 @@ test("page points at the manifest, stylesheet, script, and icons", () => {
   assert.doesNotMatch(loader, /replaceAll/);
   const deck = JSON.parse(readFileSync(new URL("../decks/tech-english-100.json", import.meta.url), "utf8"));
   assert.equal(deck.cards.length, 100);
+  for (const card of deck.cards) {
+    assert.equal(typeof card.example, "string", card.front);
+    assert.ok(card.example.length >= 12, card.front);
+    const example = card.example.toLowerCase();
+    const parts = card.front.toLowerCase().split(/\s*\/\s*/);
+    assert.ok(parts.some((part) => example.includes(part)), `${card.front}: ${card.example}`);
+  }
+  assert.match(html, /發音/);
+  assert.match(html, /朗讀例句/);
+  assert.match(readFileSync(new URL("../sw.js", import.meta.url), "utf8"), /js\/speech\.js/);
 });
