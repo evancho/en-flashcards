@@ -261,6 +261,14 @@ h2 { margin: 0; font-size: 1.25rem; }
   gap: 8px;
 }
 
+.speak-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.example-block .speak-row { justify-content: center; }
+
 .example-line {
   margin: 0;
   font-size: 1.05rem;

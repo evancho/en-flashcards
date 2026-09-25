@@ -1,6 +1,6 @@
 import { createStore, parseImport } from "./store.js";
 import { formatDelay, previewPlan, stageLabel, formatDue } from "./srs.js";
-import { prepareVoices, speakEnglish, speechAvailable } from "./speech.js";
+import { prepareVoices, speakChinese, speakEnglish, speechAvailable } from "./speech.js";
 import { findTermRanges } from "./highlight.js";
 import { readSettings, shuffleInPlace, writeSettings } from "./review.js";
 
@@ -167,7 +167,8 @@ function setRevealed(on) {
   $("#card-example-zh").hidden = !exampleZh;
   const canSpeak = speechAvailable();
   $("#speak-front").hidden = !canSpeak || (settings.reverse && !on);
-  $("#speak-example").hidden = !canSpeak;
+  $("#speak-example").hidden = !canSpeak || !example;
+  $("#speak-example-zh").hidden = !canSpeak || !exampleZh;
   $("#speech-note").hidden = canSpeak;
 }
 
@@ -249,6 +250,7 @@ function renderForm() {
   const canSpeak = speechAvailable();
   $("#speak-form-front").hidden = !canSpeak;
   $("#speak-form-example").hidden = !canSpeak;
+  $("#speak-form-example-zh").hidden = !canSpeak || !$("#example-zh").value.trim();
 }
 
 function renderList() {
@@ -309,7 +311,13 @@ function renderList() {
         gloss.textContent = card.exampleZh;
         row.append(gloss);
       }
-      if (speechAvailable()) row.append(speakButton(card.example, "朗讀例句"));
+      if (speechAvailable()) {
+        const speaks = document.createElement("div");
+        speaks.className = "speak-row";
+        speaks.append(speakButton(card.example, "朗讀例句"));
+        if (card.exampleZh) speaks.append(speakButton(card.exampleZh, "朗讀中文", "zh"));
+        row.append(speaks);
+      }
     }
     row.append(meta, actions);
     list.append(row);
@@ -374,22 +382,25 @@ function fillHighlighted(el, sentence, term) {
   if (cursor < text.length) el.append(document.createTextNode(text.slice(cursor)));
 }
 
-function speakButton(text, label) {
+function speakButton(text, label, lang = "en") {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "speak";
   button.dataset.speak = text;
+  button.dataset.speakLang = lang;
   button.textContent = label;
   return button;
 }
 
-function speakLine(text, { quiet = false } = {}) {
+function speakLine(text, { quiet = false, lang = "en" } = {}) {
   const line = String(text ?? "").trim();
+  const chinese = lang === "zh";
   if (!line) {
-    if (!quiet) toast("沒有可以朗讀的英文。");
+    if (!quiet) toast(chinese ? "沒有可以朗讀的中文。" : "沒有可以朗讀的英文。");
     return;
   }
-  if (!speakEnglish(line) && !quiet) toast("這台裝置無法朗讀英文。");
+  const spoke = chinese ? speakChinese(line) : speakEnglish(line);
+  if (!spoke && !quiet) toast(chinese ? "這台裝置無法朗讀中文。" : "這台裝置無法朗讀英文。");
 }
 
 function reveal() {
@@ -904,13 +915,16 @@ function bind() {
   });
   $("#speak-front").addEventListener("click", () => speakLine(state.current?.front));
   $("#speak-example").addEventListener("click", () => speakLine(state.current?.example));
+  $("#speak-example-zh").addEventListener("click", () => speakLine(state.current?.exampleZh, { lang: "zh" }));
   $("#speak-form-front").addEventListener("click", () => speakLine($("#front").value));
   $("#speak-form-example").addEventListener("click", () => speakLine($("#example").value));
+  $("#speak-form-example-zh").addEventListener("click", () => speakLine($("#example-zh").value, { lang: "zh" }));
+  $("#example-zh").addEventListener("input", () => renderForm());
   $("#card-list").addEventListener("click", (event) => {
     const button = event.target.closest("[data-speak]");
     if (!button) return;
     event.stopPropagation();
-    speakLine(button.dataset.speak);
+    speakLine(button.dataset.speak, { lang: button.dataset.speakLang === "zh" ? "zh" : "en" });
   });
   $("#ratings").addEventListener("click", (event) => {
     const button = event.target.closest("[data-rating]");

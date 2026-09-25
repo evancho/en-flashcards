@@ -91,7 +91,9 @@ test("page points at the manifest, stylesheet, script, and icons", () => {
   });
   assert.match(html, /發音/);
   assert.match(html, /朗讀例句/);
-  assert.match(html, /版本 v8 · 隨機與先中文/);
+  assert.match(html, /朗讀中文/);
+  assert.match(html, /版本 v9 · 例句中文朗讀/);
+  assert.match(app, /speakChinese/);
   const review = html.slice(html.indexOf('id="view-review"'), html.indexOf('id="view-add"'));
   assert.match(review, /先英文/);
   assert.match(review, /先中文/);
@@ -99,7 +101,7 @@ test("page points at the manifest, stylesheet, script, and icons", () => {
   assert.match(app, /shuffleInPlace/);
   assert.match(readFileSync(new URL("../js/review.js", import.meta.url), "utf8"), /en-flashcards\.settings/);
   const worker = readFileSync(new URL("../sw.js", import.meta.url), "utf8");
-  assert.match(worker, /const CACHE = "en-flashcards-v8"/);
+  assert.match(worker, /const CACHE = "en-flashcards-v9"/);
   assert.match(worker, /keys\.filter\(\(key\) => key !== CACHE\)/);
   assert.match(worker, /js\/speech\.js/);
   assert.match(worker, /js\/highlight\.js/);
