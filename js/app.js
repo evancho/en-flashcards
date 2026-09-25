@@ -672,10 +672,10 @@ function deckPath(path) {
 }
 
 function reportSelectedMerge(added, filled, skipped) {
-  if (added > 0 && filled > 0) toast(`已加入 ${added} 張、補上 ${filled} 張例句`);
+  if (added > 0 && filled > 0) toast(`已加入 ${added} 張、補上 ${filled} 張缺少的例句或字根`);
   else if (added > 0 && skipped > 0) toast(`已加入 ${added} 張，略過 ${skipped} 張已有的`);
   else if (added > 0) toast(`已加入 ${added} 張`);
-  else if (filled > 0) toast(`已補上 ${filled} 張例句`);
+  else if (filled > 0) toast(`已補上 ${filled} 張缺少的例句或字根`);
   else toast("已加入 0 張，這些詞都已經在詞庫裡");
 }
 
@@ -860,7 +860,7 @@ async function loadSelectedDecks() {
     state.revealed = false;
     if ((added > 0 || filled > 0) && state.view === "review") refreshQueue();
     if (failed === paths.length) toast("請連上網路打開一次，才能載入詞庫。");
-    else if (failed > 0) toast(`已加入 ${added} 張、補上 ${filled} 張例句。有 ${failed} 套沒讀到，請連上網路再試。`);
+    else if (failed > 0) toast(`已加入 ${added} 張、補上 ${filled} 張缺少的例句或字根。有 ${failed} 套沒讀到，請連上網路再試。`);
     else reportSelectedMerge(added, filled, skipped);
     render();
   } catch (error) {
