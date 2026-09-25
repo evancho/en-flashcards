@@ -169,6 +169,8 @@ h2 { margin: 0; font-size: 1.25rem; }
 #view-review .flashcard {
   min-height: 0;
   overflow: auto;
+  justify-content: flex-start;
+  justify-content: safe center;
 }
 
 #review-empty {
@@ -219,8 +221,9 @@ h2 { margin: 0; font-size: 1.25rem; }
 
 .commute-card.reverse #commute-zh { order: 1; }
 .commute-card.reverse #commute-en { order: 2; }
-.commute-card.reverse #commute-example-zh { order: 3; }
-.commute-card.reverse #commute-example { order: 4; }
+.commute-card.reverse #commute-breakdown { order: 3; }
+.commute-card.reverse #commute-example-zh { order: 4; }
+.commute-card.reverse #commute-example { order: 5; }
 
 .commute-card .is-speaking { color: var(--accent-ink); }
 
@@ -404,6 +407,21 @@ mark.term {
   color: var(--muted);
   overflow-wrap: anywhere;
 }
+
+.breakdown {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.flashcard .breakdown,
+.card-row .breakdown { width: 100%; }
+
+.breakdown .kicker { display: block; margin-bottom: 2px; }
+
+.commute-card .breakdown { font-size: 0.92rem; }
 
 .title-row {
   display: flex;

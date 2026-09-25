@@ -161,10 +161,13 @@ function setRevealed(on) {
   $("#card-kicker").textContent = on ? "答案" : settings.reverse ? "中文" : "英文";
   const example = state.current?.example || "";
   const exampleZh = state.current?.exampleZh || "";
+  const breakdown = state.current?.breakdown || "";
   $("#example-block").hidden = !on || !example;
   fillHighlighted($("#card-example"), example, state.current?.front || "");
   $("#card-example-zh").textContent = exampleZh;
   $("#card-example-zh").hidden = !exampleZh;
+  $("#card-breakdown-text").textContent = breakdown;
+  $("#card-breakdown").hidden = !on || !breakdown;
   const canSpeak = speechAvailable();
   $("#speak-front").hidden = !canSpeak || (settings.reverse && !on);
   $("#speak-example").hidden = !canSpeak || !example;
@@ -259,7 +262,7 @@ function renderList() {
   const matched = cards
     .filter((card) => {
       if (!query) return true;
-      return [card.front, card.back, card.example, card.exampleZh].some((value) =>
+      return [card.front, card.back, card.example, card.exampleZh, card.breakdown].some((value) =>
         String(value || "").toLowerCase().includes(query),
       );
     })
@@ -318,6 +321,15 @@ function renderList() {
         if (card.exampleZh) speaks.append(speakButton(card.exampleZh, "朗讀中文", "zh"));
         row.append(speaks);
       }
+    }
+    if (card.breakdown) {
+      const parts = document.createElement("p");
+      parts.className = "breakdown";
+      const label = document.createElement("span");
+      label.className = "kicker";
+      label.textContent = "字根拆解";
+      parts.append(label, document.createTextNode(` ${card.breakdown}`));
+      row.append(parts);
     }
     row.append(meta, actions);
     list.append(row);
@@ -385,6 +397,8 @@ function renderCommute() {
     $("#commute-en").textContent = card.front || "";
     $("#commute-zh").textContent = card.back || "";
     $("#commute-zh").hidden = !card.back;
+    $("#commute-breakdown").textContent = card.breakdown ? `字根拆解 ${card.breakdown}` : "";
+    $("#commute-breakdown").hidden = !card.breakdown;
     $("#commute-example").textContent = card.example || "";
     $("#commute-example").hidden = !card.example;
     $("#commute-example-zh").textContent = card.exampleZh || "";
@@ -493,7 +507,11 @@ function resetForm() {
 }
 
 function exampleFields() {
-  return { example: $("#example").value, exampleZh: $("#example-zh").value };
+  return {
+    example: $("#example").value,
+    exampleZh: $("#example-zh").value,
+    breakdown: $("#breakdown").value,
+  };
 }
 
 function fillForm(card) {
@@ -501,6 +519,7 @@ function fillForm(card) {
   $("#back").value = card.back;
   $("#example").value = card.example || "";
   $("#example-zh").value = card.exampleZh || "";
+  $("#breakdown").value = card.breakdown || "";
 }
 
 function fillHighlighted(el, sentence, term) {

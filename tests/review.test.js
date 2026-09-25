@@ -43,6 +43,10 @@ test("commute queue prefers due cards and can shuffle without touching them", ()
     commuteLines(first).map((line) => line.kind),
     ["front", "back", "example", "exampleZh"],
   );
+  assert.deepEqual(
+    commuteLines({ ...first, breakdown: "end + point → 末端 + 點" }).map((line) => line.kind),
+    ["front", "back", "example", "exampleZh"],
+  );
   assert.deepEqual(commuteLines({ front: "hi", back: "  ", example: "", exampleZh: "嗨" }).map((line) => line.text), ["hi", "嗨"]);
 });
 
